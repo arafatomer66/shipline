@@ -1,6 +1,7 @@
 import { Component, computed, inject, input, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { FCanvasComponent, FFlowModule } from '@foblex/flow';
 import { Api, Feature, ProjectFull, Track, TrackStatus } from '../api.service';
@@ -22,29 +23,44 @@ const FEATURE_TOP = 420;
 @Component({
   selector: 'app-project',
   standalone: true,
-  imports: [CommonModule, FormsModule, FFlowModule],
+  imports: [CommonModule, FormsModule, RouterLink, FFlowModule],
   template: `
     @if (ready() && project(); as p) {
       <section class="flex flex-col h-[calc(100vh-57px)]">
-        <div class="flex items-center justify-between px-6 py-3 border-b border-line bg-white">
-          <div>
-            <h1 class="text-xl font-semibold tracking-tight">{{ p.name }}</h1>
-            <div class="text-xs text-slate-400">{{ features().length }} features · {{ p.epics.length }} epics</div>
+        <div class="flex items-center justify-between px-6 py-3 border-b border-line bg-white/80 backdrop-blur sticky top-0 z-20">
+          <div class="flex items-center gap-3">
+            <a routerLink="/" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 text-sm">←</a>
+            <div>
+              <h1 class="text-base font-semibold tracking-tight leading-tight">{{ p.name }}</h1>
+              <div class="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                <span>{{ features().length }} features</span>
+                <span class="text-slate-300">·</span>
+                <span>{{ p.epics.length }} epics</span>
+                @if (selectedEpicId()) {
+                  <span class="text-slate-300">·</span>
+                  <span class="text-ink font-medium">{{ selectedEpicName() }} selected</span>
+                  <button class="ml-1 text-slate-400 hover:text-ink" (click)="clearSelection(); $event.stopPropagation()">× clear</button>
+                }
+              </div>
+            </div>
           </div>
-          <div class="flex gap-2 text-sm">
-            <button class="px-3 py-1.5 rounded border border-line"
-                    [class.bg-ink]="view()==='canvas'" [class.text-white]="view()==='canvas'"
-                    [class.bg-white]="view()!=='canvas'"
+          <div class="flex gap-1 text-sm bg-slate-100 rounded-lg p-1">
+            <button class="px-3 py-1 rounded-md transition"
+                    [class.bg-white]="view()==='canvas'"
+                    [class.shadow-sm]="view()==='canvas'"
+                    [class.text-slate-500]="view()!=='canvas'"
                     (click)="view.set('canvas')">Canvas</button>
-            <button class="px-3 py-1.5 rounded border border-line"
-                    [class.bg-ink]="view()==='dashboard'" [class.text-white]="view()==='dashboard'"
-                    [class.bg-white]="view()!=='dashboard'"
+            <button class="px-3 py-1 rounded-md transition"
+                    [class.bg-white]="view()==='dashboard'"
+                    [class.shadow-sm]="view()==='dashboard'"
+                    [class.text-slate-500]="view()!=='dashboard'"
                     (click)="view.set('dashboard'); refreshDashboard()">Dashboard</button>
           </div>
         </div>
 
         @if (view() === 'canvas') {
-          <div class="flex-1 relative bg-slate-50" (click)="clearSelection()">
+          <div class="flex-1 relative bg-slate-50" (click)="clearSelection()"
+               style="background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px); background-size: 22px 22px;">
             <f-flow fDraggable class="block w-full h-full" (fFullRendered)="onFullRendered()">
               <f-canvas fZoom #canvas>
 
@@ -153,24 +169,27 @@ const FEATURE_TOP = 420;
               <f-minimap></f-minimap>
             </f-flow>
 
-            <div class="absolute top-4 right-4 flex gap-1 bg-white rounded-lg border border-line p-1 shadow-sm">
-              <button class="px-2 py-1 text-xs rounded hover:bg-slate-100" (click)="fit()">Fit</button>
-              <button class="px-2 py-1 text-xs rounded hover:bg-slate-100" (click)="resetView()">1:1</button>
-              <button class="px-2 py-1 text-xs rounded hover:bg-slate-100" (click)="zoom(1.2)">＋</button>
-              <button class="px-2 py-1 text-xs rounded hover:bg-slate-100" (click)="zoom(0.83)">－</button>
+            <div class="absolute top-4 right-4 flex gap-0.5 bg-white/90 backdrop-blur rounded-xl border border-slate-200 p-1 shadow-sm" (click)="$event.stopPropagation()">
+              <button class="px-3 py-1.5 text-xs rounded-lg hover:bg-slate-100 transition font-medium" (click)="fit()" title="Fit to screen">Fit</button>
+              <button class="px-3 py-1.5 text-xs rounded-lg hover:bg-slate-100 transition font-medium" (click)="resetView()" title="100% zoom">1:1</button>
+              <div class="w-px bg-slate-200 mx-0.5 my-1"></div>
+              <button class="px-2.5 py-1.5 text-sm rounded-lg hover:bg-slate-100 transition" (click)="zoom(1.2)" title="Zoom in">＋</button>
+              <button class="px-2.5 py-1.5 text-sm rounded-lg hover:bg-slate-100 transition" (click)="zoom(0.83)" title="Zoom out">－</button>
             </div>
 
-            <div class="absolute bottom-4 left-4 bg-white rounded-lg border border-line p-3 text-xs shadow-sm">
-              <div class="font-medium mb-1">Status</div>
-              <div class="grid grid-cols-2 gap-x-3 gap-y-1">
+            <div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur rounded-xl border border-slate-200 p-3 text-xs shadow-sm" (click)="$event.stopPropagation()">
+              <div class="font-semibold mb-1.5 text-slate-700">Track status</div>
+              <div class="grid grid-cols-2 gap-x-4 gap-y-1">
                 @for (s of statusKeys; track s) {
                   <div class="flex items-center gap-1.5">
-                    <span class="inline-block w-3 h-3 rounded" [style.background]="statusColorRaw(s)"></span>
+                    <span class="inline-block w-2.5 h-2.5 rounded-sm" [style.background]="statusColorRaw(s)"></span>
                     <span class="text-slate-600">{{ pretty(s) }}</span>
                   </div>
                 }
               </div>
-              <div class="mt-2 text-slate-400">Drag canvas to pan · scroll to zoom</div>
+              <div class="mt-2 pt-2 border-t border-slate-100 text-slate-400 text-[11px]">
+                Click epic to spotlight · drag to pan · scroll to zoom
+              </div>
             </div>
           </div>
         } @else {
@@ -206,8 +225,18 @@ const FEATURE_TOP = 420;
           </div>
         }
       </section>
+    } @else if (loadError()) {
+      <div class="max-w-xl mx-auto mt-20 p-6 rounded-2xl border border-red-200 bg-red-50">
+        <div class="font-semibold text-red-700">Couldn't load project</div>
+        <div class="text-sm text-red-600 mt-1">{{ loadError() }}</div>
+        <div class="text-xs text-red-500 mt-3">Check that the API is running on :3001 and try again.</div>
+        <button class="mt-4 px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm" (click)="load()">Retry</button>
+      </div>
     } @else {
-      <div class="px-6 py-10 text-slate-400">Loading…</div>
+      <div class="flex items-center justify-center h-[calc(100vh-57px)] gap-3 text-slate-400">
+        <span class="inline-block w-4 h-4 border-2 border-slate-300 border-t-ink rounded-full animate-spin"></span>
+        Loading project…
+      </div>
     }
   `,
 })
@@ -218,6 +247,7 @@ export class ProjectPage {
   project = signal<ProjectFull | null>(null);
   features = signal<Feature[]>([]);
   ready = signal(false);
+  loadError = signal<string | null>(null);
   view = signal<'canvas' | 'dashboard'>('canvas');
   dashboard = signal<any | null>(null);
   selectedEpicId = signal<string | null>(null);
@@ -242,6 +272,13 @@ export class ProjectPage {
   isSelectedEpic(epicId: string) {
     return this.selectedEpicId() === epicId;
   }
+
+  selectedEpicName = computed(() => {
+    const sel = this.selectedEpicId();
+    const p = this.project();
+    if (!sel || !p) return '';
+    return p.epics.find(e => e.id === sel)?.name ?? '';
+  });
 
   canvas = viewChild<FCanvasComponent>('canvas');
   statusKeys = STATUS_ORDER;
@@ -304,13 +341,21 @@ export class ProjectPage {
   }
 
   load() {
+    this.loadError.set(null);
     forkJoin({
       project: this.api.getProject(this.id()),
       features: this.api.listFeatures(this.id()),
-    }).subscribe(({ project, features }) => {
-      this.project.set(project);
-      this.features.set(features);
-      this.ready.set(true);
+    }).subscribe({
+      next: ({ project, features }) => {
+        this.project.set(project);
+        this.features.set(features);
+        this.ready.set(true);
+      },
+      error: (err) => {
+        const msg = err?.error?.message ?? err?.message ?? 'Failed to load project';
+        this.loadError.set(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        console.error('[Shipline] load failed', err);
+      },
     });
   }
 
