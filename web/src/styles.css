@@ -4,3 +4,46 @@
 
 html, body { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif; }
 * { box-sizing: border-box; }
+
+/* Shipline overrides for Foblex visibility */
+:root {
+  --ff-color-connection: #94a3b8;
+  --ff-connection-color: #94a3b8;
+  --ff-connection-width: 2px;
+  --ff-marker-color: #64748b;
+}
+
+f-flow .f-connection .f-connection-path {
+  stroke: #94a3b8 !important;
+  stroke-width: 2px !important;
+  fill: none !important;
+}
+
+f-flow .f-connection .f-connection-selection {
+  stroke: transparent !important;
+  stroke-width: 14px !important;
+  fill: none !important;
+}
+
+f-flow .f-connection .f-connection-marker path,
+f-flow .f-connection .f-connection-marker polygon,
+f-flow .f-connection [fMarker] path {
+  fill: #64748b !important;
+  stroke: #64748b !important;
+}
+
+f-minimap {
+  position: absolute !important;
+  bottom: 16px !important;
+  right: 16px !important;
+  width: 220px !important;
+  height: 160px !important;
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+  overflow: hidden !important;
+  z-index: 5;
+}
+f-minimap .f-minimap-node, f-minimap .f-minimap-group { fill: #cbd5e1 !important; }
+f-minimap .f-minimap-view { fill: rgba(99, 102, 241, 0.12) !important; stroke: #6366f1 !important; }
