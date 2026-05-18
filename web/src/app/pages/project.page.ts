@@ -49,12 +49,20 @@ const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'D
                     [fNodeId]="f.id"
                     [fNodePosition]="{ x: f.canvasX, y: f.canvasY }"
                     (fNodePositionChange)="onMove(f.id, $event)"
-                    class="w-64 rounded-lg border border-line bg-white shadow-sm overflow-hidden"
+                    class="relative w-64 rounded-lg border border-line bg-white shadow-sm overflow-visible"
                   >
-                    <div fNodeInput [fInputId]="'in-' + f.id" class="absolute -left-1 top-6 w-2 h-2 rounded-full bg-slate-300"></div>
-                    <div fNodeOutput [fOutputId]="'out-' + f.id" class="absolute -right-1 top-6 w-2 h-2 rounded-full bg-slate-300"></div>
+                    <div
+                      fNodeInput
+                      [fInputId]="'in-' + f.id"
+                      fInputConnectableSide="left"
+                      class="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white z-10"></div>
+                    <div
+                      fNodeOutput
+                      [fOutputId]="'out-' + f.id"
+                      fOutputConnectableSide="right"
+                      class="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white z-10"></div>
 
-                    <div class="px-3 pt-2 pb-1 flex items-center justify-between">
+                    <div class="px-3 pt-2 pb-1 flex items-center justify-between rounded-t-lg overflow-hidden">
                       <span class="text-[10px] uppercase tracking-wide text-slate-400 truncate max-w-[140px]">
                         {{ f.epic?.name }}@if (f.externalId) { · {{ f.externalId }} }
                       </span>
@@ -64,7 +72,7 @@ const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'D
                       </span>
                     </div>
                     <div class="px-3 pb-2 text-sm font-medium leading-snug">{{ f.title }}</div>
-                    <div class="flex h-1.5">
+                    <div class="flex h-1.5 rounded-b-lg overflow-hidden">
                       @for (t of p.tracks; track t.id) {
                         <button
                           class="flex-1 border-r border-white last:border-r-0"
@@ -78,7 +86,13 @@ const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'D
 
                 @for (f of features(); track f.id) {
                   @for (dep of f.outgoingDeps; track dep.id) {
-                    <f-connection [fOutputId]="'out-' + f.id" [fInputId]="'in-' + dep.toFeatureId" />
+                    <f-connection
+                      [fOutputId]="'out-' + f.id"
+                      [fInputId]="'in-' + dep.toFeatureId"
+                      fBehavior="floating"
+                      fType="bezier">
+                      <f-connection-marker-arrow></f-connection-marker-arrow>
+                    </f-connection>
                   }
                 }
               </f-canvas>

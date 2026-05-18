@@ -109,9 +109,10 @@ export class ImportService {
 
     const perEpicX = new Map<string, number>();
     const epicY = new Map<string, number>();
+    const epicFeatureIds = new Map<string, string[]>();
     let eIndex = 0;
     for (const [name] of epicCache) {
-      epicY.set(name, eIndex * 220);
+      epicY.set(name, eIndex * 360);
       eIndex += 1;
     }
 
@@ -120,7 +121,7 @@ export class ImportService {
       const epicName = String(r['epic'] ?? 'Unassigned').trim() || 'Unassigned';
       const epicId = epicCache.get(epicName)!;
 
-      const x = (perEpicX.get(epicName) ?? 0) * 280 + 40;
+      const x = (perEpicX.get(epicName) ?? 0) * 320 + 40;
       const y = (epicY.get(epicName) ?? 0) + 40;
       perEpicX.set(epicName, (perEpicX.get(epicName) ?? 0) + 1);
 
@@ -153,6 +154,9 @@ export class ImportService {
         },
       });
       created += 1;
+      const ids = epicFeatureIds.get(epicName) ?? [];
+      ids.push(feature.id);
+      epicFeatureIds.set(epicName, ids);
 
       const prototypeTrack = trackByName.get('prototype');
       if (prototypeTrack) {
@@ -189,11 +193,82 @@ export class ImportService {
       }
     }
 
+    let depsCreated = 0;
+    for (const ids of epicFeatureIds.values()) {
+      for (let i = 0; i < ids.length - 1; i++) {
+        await this.prisma.dependency.create({
+          data: {
+            projectId: project.id,
+            fromFeatureId: ids[i],
+            toFeatureId: ids[i + 1],
+            type: 'DEPENDS_ON',
+          },
+        });
+        depsCreated += 1;
+      }
+    }
+
     return {
       projectId: project.id,
       slug: project.slug,
       epics: epicCache.size,
       features: created,
+      dependencies: depsCreated,
     };
+  }
+
+  async relinkSequentialByEpic(projectId: string) {
+    const features = await this.prisma.feature.findMany({
+      where: { projectId },
+      orderBy: [{ epicId: 'asc' }, { createdAt: 'asc' }],
+      select: { id: true, epicId: true },
+    });
+
+    await this.prisma.dependency.deleteMany({
+      where: { projectId, type: 'DEPENDS_ON' },
+    });
+
+    const byEpic = new Map<string, string[]>();
+    for (const f of features) {
+      const k = f.epicId ?? '__none__';
+      if (!byEpic.has(k)) byEpic.set(k, []);
+      byEpic.get(k)!.push(f.id);
+    }
+
+    let created = 0;
+    for (const ids of byEpic.values()) {
+      for (let i = 0; i < ids.length - 1; i++) {
+        await this.prisma.dependency.create({
+          data: {
+            projectId,
+            fromFeatureId: ids[i],
+            toFeatureId: ids[i + 1],
+            type: 'DEPENDS_ON',
+          },
+        });
+        created += 1;
+      }
+    }
+
+    const epics = await this.prisma.epic.findMany({
+      where: { projectId },
+      orderBy: { order: 'asc' },
+      select: { id: true },
+    });
+    const epicY = new Map(epics.map((e, i) => [e.id, i * 360 + 40]));
+
+    let posUpdated = 0;
+    for (const [epicKey, ids] of byEpic.entries()) {
+      const y = epicKey === '__none__' ? epics.length * 360 + 40 : (epicY.get(epicKey) ?? 0);
+      for (let i = 0; i < ids.length; i++) {
+        await this.prisma.feature.update({
+          where: { id: ids[i] },
+          data: { canvasX: i * 320 + 40, canvasY: y },
+        });
+        posUpdated += 1;
+      }
+    }
+
+    return { projectId, dependencies: created, positionsUpdated: posUpdated };
   }
 }
