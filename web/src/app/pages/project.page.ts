@@ -46,17 +46,42 @@ const FEATURE_TOP = 420;
               </div>
             </div>
           </div>
-          <div class="flex gap-1 text-sm bg-slate-100 rounded-lg p-1">
-            <button class="px-3 py-1 rounded-md transition"
-                    [class.bg-white]="view()==='canvas'"
-                    [class.shadow-sm]="view()==='canvas'"
-                    [class.text-slate-500]="view()!=='canvas'"
-                    (click)="view.set('canvas')">Canvas</button>
-            <button class="px-3 py-1 rounded-md transition"
-                    [class.bg-white]="view()==='dashboard'"
-                    [class.shadow-sm]="view()==='dashboard'"
-                    [class.text-slate-500]="view()!=='dashboard'"
-                    (click)="view.set('dashboard'); refreshDashboard()">Dashboard</button>
+          <div class="flex items-center gap-3">
+            <div class="relative">
+              <button
+                class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm flex items-center gap-1.5 hover:bg-slate-50"
+                (click)="exportOpen.set(!exportOpen())">
+                Export
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              @if (exportOpen()) {
+                <div class="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden z-30"
+                     (click)="exportOpen.set(false)">
+                  <button class="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center justify-between"
+                          (click)="exportProject('xlsx')">
+                    <span>Excel (.xlsx)</span>
+                    <span class="text-[10px] text-slate-400">re-importable</span>
+                  </button>
+                  <button class="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center justify-between"
+                          (click)="exportProject('json')">
+                    <span>JSON snapshot</span>
+                    <span class="text-[10px] text-slate-400">full fidelity</span>
+                  </button>
+                </div>
+              }
+            </div>
+            <div class="flex gap-1 text-sm bg-slate-100 rounded-lg p-1">
+              <button class="px-3 py-1 rounded-md transition"
+                      [class.bg-white]="view()==='canvas'"
+                      [class.shadow-sm]="view()==='canvas'"
+                      [class.text-slate-500]="view()!=='canvas'"
+                      (click)="view.set('canvas')">Canvas</button>
+              <button class="px-3 py-1 rounded-md transition"
+                      [class.bg-white]="view()==='dashboard'"
+                      [class.shadow-sm]="view()==='dashboard'"
+                      [class.text-slate-500]="view()!=='dashboard'"
+                      (click)="view.set('dashboard'); refreshDashboard()">Dashboard</button>
+            </div>
           </div>
         </div>
 
@@ -523,6 +548,18 @@ export class ProjectPage {
   epicY = EPIC_Y;
   creating = signal<'feature' | 'epic' | null>(null);
   newItemName = '';
+  exportOpen = signal(false);
+
+  exportProject(format: 'xlsx' | 'json') {
+    const url = `http://localhost:3001/api/projects/${this.id()}/export/${format}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    this.toasts.success(`Downloading ${format.toUpperCase()} export…`);
+  }
 
   rootPos = computed(() => {
     const p = this.project();
