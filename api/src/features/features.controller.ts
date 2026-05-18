@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
-import { TrackStatus } from '@prisma/client';
-import { IsEnum, IsNumber, IsString } from 'class-validator';
+import { BackendNeeded, Effort, Priority, PrototypeState, TrackStatus } from '@prisma/client';
+import { IsEnum, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 import { FeaturesService } from './features.service';
 
 class UpdatePositionDto {
@@ -12,6 +12,26 @@ class SetTrackStatusDto {
   @IsString() trackId!: string;
   @IsEnum(['NOT_STARTED','IN_PROGRESS','BLOCKED','DONE','NA'])
   status!: TrackStatus;
+}
+
+class UpdateFeatureDto {
+  @IsOptional() @IsString() @MaxLength(300) title?: string;
+  @IsOptional() @IsString() description?: string | null;
+  @IsOptional() @IsString() externalId?: string | null;
+  @IsOptional() @IsString() subArea?: string | null;
+  @IsOptional() @IsString() userRole?: string | null;
+  @IsOptional() @IsString() trigger?: string | null;
+  @IsOptional() @IsString() screenFile?: string | null;
+  @IsOptional() @IsString() uiElementType?: string | null;
+  @IsOptional() @IsString() apiEndpointHint?: string | null;
+  @IsOptional() @IsString() acceptanceCriteria?: string | null;
+  @IsOptional() @IsString() notes?: string | null;
+  @IsOptional() @IsString() owner?: string | null;
+  @IsOptional() @IsString() sprintTarget?: string | null;
+  @IsOptional() @IsEnum(['P0','P1','P2','P3']) priority?: Priority;
+  @IsOptional() @IsEnum(['XS','S','M','L','XL']) estimatedEffort?: Effort | null;
+  @IsOptional() @IsEnum(['NOT_DONE','MOCK','DONE']) prototypeState?: PrototypeState;
+  @IsOptional() @IsEnum(['NO','YES','PARTIAL','HYBRID']) backendNeeded?: BackendNeeded;
 }
 
 @Controller('features')
@@ -31,6 +51,11 @@ export class FeaturesController {
   @Patch(':id/position')
   updatePosition(@Param('id') id: string, @Body() dto: UpdatePositionDto) {
     return this.features.updatePosition(id, dto.x, dto.y);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateFeatureDto) {
+    return this.features.update(id, dto);
   }
 
   @Patch(':id/track-status')

@@ -1,6 +1,26 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { TrackStatus } from '@prisma/client';
+import { BackendNeeded, Effort, Priority, PrototypeState, TrackStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+
+export interface UpdateFeatureInput {
+  title?: string;
+  description?: string | null;
+  externalId?: string | null;
+  subArea?: string | null;
+  userRole?: string | null;
+  trigger?: string | null;
+  screenFile?: string | null;
+  uiElementType?: string | null;
+  apiEndpointHint?: string | null;
+  acceptanceCriteria?: string | null;
+  notes?: string | null;
+  owner?: string | null;
+  sprintTarget?: string | null;
+  priority?: Priority;
+  estimatedEffort?: Effort | null;
+  prototypeState?: PrototypeState;
+  backendNeeded?: BackendNeeded;
+}
 
 @Injectable()
 export class FeaturesService {
@@ -32,6 +52,14 @@ export class FeaturesService {
       where: { id },
       data: { canvasX: x, canvasY: y },
       select: { id: true, canvasX: true, canvasY: true },
+    });
+  }
+
+  update(id: string, dto: UpdateFeatureInput) {
+    return this.prisma.feature.update({
+      where: { id },
+      data: dto,
+      include: { epic: true, trackStatuses: true },
     });
   }
 

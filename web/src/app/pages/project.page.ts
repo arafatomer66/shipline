@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { FCanvasComponent, FFlowModule } from '@foblex/flow';
 import { Api, Feature, ProjectFull, Track, TrackStatus } from '../api.service';
+import { FeatureDetailPanel } from '../feature-detail-panel.component';
 
 const STATUS_COLOR: Record<TrackStatus, string> = {
   NOT_STARTED: '#cbd5e1',
@@ -23,7 +24,7 @@ const FEATURE_TOP = 420;
 @Component({
   selector: 'app-project',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, FFlowModule],
+  imports: [CommonModule, FormsModule, RouterLink, FFlowModule, FeatureDetailPanel],
   template: `
     @if (ready() && project(); as p) {
       <section class="flex flex-col h-[calc(100vh-57px)]">
@@ -121,8 +122,12 @@ const FEATURE_TOP = 420;
                     fInputConnectableSide="top"
                     [fNodePosition]="{ x: f.canvasX, y: f.canvasY }"
                     (fNodePositionChange)="onMove(f.id, $event)"
-                    class="w-64 rounded-lg border border-line bg-white shadow-sm transition-all"
+                    class="w-64 rounded-lg border border-line bg-white shadow-sm transition-all cursor-pointer hover:border-slate-400 hover:shadow-md"
                     [class.opacity-25]="dimFeature(f.epicId)"
+                    [class.!border-ink]="selectedFeatureId() === f.id"
+                    [class.ring-2]="selectedFeatureId() === f.id"
+                    [class.ring-ink]="selectedFeatureId() === f.id"
+                    (click)="openFeature(f, $event)"
                   >
                     <div class="px-3 pt-2 pb-1 flex items-center justify-between">
                       <span class="text-[10px] uppercase tracking-wide text-slate-400 truncate max-w-[140px]">
@@ -225,6 +230,10 @@ const FEATURE_TOP = 420;
           </div>
         }
       </section>
+      <app-feature-detail-panel
+        [feature]="selectedFeature()"
+        (saved)="onFeatureSaved($event)"
+        (close)="closeFeature()" />
     } @else if (loadError()) {
       <div class="max-w-xl mx-auto mt-20 p-6 rounded-2xl border border-red-200 bg-red-50">
         <div class="font-semibold text-red-700">Couldn't load project</div>
@@ -251,11 +260,38 @@ export class ProjectPage {
   view = signal<'canvas' | 'dashboard'>('canvas');
   dashboard = signal<any | null>(null);
   selectedEpicId = signal<string | null>(null);
+  selectedFeatureId = signal<string | null>(null);
+
+  selectedFeature = computed<Feature | null>(() => {
+    const id = this.selectedFeatureId();
+    if (!id) return null;
+    return this.features().find(f => f.id === id) ?? null;
+  });
 
   selectEpic(epicId: string) {
-    this.selectedEpicId.update(cur => cur === epicId ? null : epicId);
+    const next = this.selectedEpicId() === epicId ? null : epicId;
+    this.selectedEpicId.set(next);
+    if (next) {
+      setTimeout(() => {
+        try { this.canvas()?.centerGroupOrNode('epic-' + next, true); } catch {}
+      }, 0);
+    }
   }
-  clearSelection() { this.selectedEpicId.set(null); }
+  clearSelection() {
+    if (this.selectedFeatureId()) return;
+    this.selectedEpicId.set(null);
+  }
+
+  openFeature(f: Feature, ev: MouseEvent) {
+    ev.stopPropagation();
+    this.selectedFeatureId.set(f.id);
+  }
+  closeFeature() {
+    this.selectedFeatureId.set(null);
+  }
+  onFeatureSaved(updated: Feature) {
+    this.features.update(list => list.map(x => x.id === updated.id ? { ...x, ...updated } : x));
+  }
 
   dimEpic(epicId: string) {
     const sel = this.selectedEpicId();
