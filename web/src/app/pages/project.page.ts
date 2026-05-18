@@ -1,6 +1,7 @@
 import { Component, computed, inject, input, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { FCanvasComponent, FFlowModule } from '@foblex/flow';
 import { Api, Feature, ProjectFull, Track, TrackStatus } from '../api.service';
 
@@ -23,7 +24,7 @@ const FEATURE_TOP = 420;
   standalone: true,
   imports: [CommonModule, FormsModule, FFlowModule],
   template: `
-    @if (project(); as p) {
+    @if (ready() && project(); as p) {
       <section class="flex flex-col h-[calc(100vh-57px)]">
         <div class="flex items-center justify-between px-6 py-3 border-b border-line bg-white">
           <div>
@@ -229,6 +230,7 @@ export class ProjectPage {
 
   project = signal<ProjectFull | null>(null);
   features = signal<Feature[]>([]);
+  ready = signal(false);
   view = signal<'canvas' | 'dashboard'>('canvas');
   dashboard = signal<any | null>(null);
 
@@ -268,8 +270,14 @@ export class ProjectPage {
   }
 
   load() {
-    this.api.getProject(this.id()).subscribe(p => this.project.set(p));
-    this.api.listFeatures(this.id()).subscribe(fs => this.features.set(fs));
+    forkJoin({
+      project: this.api.getProject(this.id()),
+      features: this.api.listFeatures(this.id()),
+    }).subscribe(({ project, features }) => {
+      this.project.set(project);
+      this.features.set(features);
+      this.ready.set(true);
+    });
   }
 
   refreshDashboard() {

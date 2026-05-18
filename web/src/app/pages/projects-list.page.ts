@@ -9,7 +9,7 @@ import { Api, ProjectSummary } from '../api.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <section class="px-6 py-10">
+    <section class="max-w-7xl mx-auto px-6 py-10">
       <div class="flex items-end justify-between mb-8">
         <div>
           <h1 class="text-3xl font-semibold tracking-tight">Projects</h1>

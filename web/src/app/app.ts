@@ -19,7 +19,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
         </nav>
       </div>
     </header>
-    <main class="max-w-7xl mx-auto">
+    <main class="w-full">
       <router-outlet />
     </main>
   `,
