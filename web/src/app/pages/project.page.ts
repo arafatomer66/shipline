@@ -51,35 +51,39 @@ const FEATURE_TOP = 420;
                 <!-- PROJECT ROOT NODE -->
                 <div
                   fNode fDragHandle
-                  fNodeOutput
                   fNodeId="project-root"
-                  fOutputId="out-project-root"
-                  fOutputConnectableSide="bottom"
                   [fNodePosition]="rootPos()"
                   class="relative w-56 rounded-2xl border-2 border-ink bg-white shadow-md px-4 py-3 text-center"
                 >
                   <div class="text-[10px] uppercase tracking-wider text-slate-400">Project</div>
                   <div class="font-semibold text-base mt-0.5 truncate">{{ p.name }}</div>
-                  <div class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-ink border-2 border-white pointer-events-none"></div>
+                  <div
+                    fNodeOutput
+                    fOutputId="out-project-root"
+                    fOutputConnectableSide="bottom"
+                    class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-ink border-2 border-white"></div>
                 </div>
 
                 <!-- EPIC NODES -->
                 @for (e of p.epics; track e.id; let i = $index) {
                   <div
                     fNode fDragHandle
-                    fNodeInput fNodeOutput
                     [fNodeId]="'epic-' + e.id"
-                    [fInputId]="'in-epic-' + e.id"
-                    [fOutputId]="'out-epic-' + e.id"
-                    fInputConnectableSide="top"
-                    fOutputConnectableSide="bottom"
                     [fNodePosition]="{ x: i * colWidth + 40 + 24, y: epicY }"
                     class="relative w-56 rounded-full border-2 border-slate-300 bg-white shadow-sm px-4 py-3 text-center"
                   >
+                    <div
+                      fNodeInput
+                      [fInputId]="'in-epic-' + e.id"
+                      fInputConnectableSide="top"
+                      class="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400 border-2 border-white"></div>
                     <div class="font-medium text-sm truncate">{{ e.name }}</div>
                     <div class="text-[10px] text-slate-400 mt-0.5">{{ featuresPerEpic()[e.id] || 0 }} features</div>
-                    <div class="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400 border-2 border-white pointer-events-none"></div>
-                    <div class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400 border-2 border-white pointer-events-none"></div>
+                    <div
+                      fNodeOutput
+                      [fOutputId]="'out-epic-' + e.id"
+                      fOutputConnectableSide="bottom"
+                      class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400 border-2 border-white"></div>
                   </div>
                 }
 
@@ -87,18 +91,21 @@ const FEATURE_TOP = 420;
                 @for (f of features(); track f.id) {
                   <div
                     fNode fDragHandle
-                    fNodeInput fNodeOutput
                     [fNodeId]="f.id"
-                    [fInputId]="'in-' + f.id"
-                    [fOutputId]="'out-' + f.id"
-                    fInputConnectableSide="top"
-                    fOutputConnectableSide="bottom"
                     [fNodePosition]="{ x: f.canvasX, y: f.canvasY }"
                     (fNodePositionChange)="onMove(f.id, $event)"
                     class="relative w-64 rounded-lg border border-line bg-white shadow-sm overflow-visible"
                   >
-                    <div class="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white pointer-events-none"></div>
-                    <div class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white pointer-events-none"></div>
+                    <div
+                      fNodeInput
+                      [fInputId]="'in-' + f.id"
+                      fInputConnectableSide="top"
+                      class="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white"></div>
+                    <div
+                      fNodeOutput
+                      [fOutputId]="'out-' + f.id"
+                      fOutputConnectableSide="bottom"
+                      class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white"></div>
 
                     <div class="px-3 pt-2 pb-1 flex items-center justify-between rounded-t-lg overflow-hidden">
                       <span class="text-[10px] uppercase tracking-wide text-slate-400 truncate max-w-[140px]">
