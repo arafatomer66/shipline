@@ -1,7 +1,7 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, inject, input, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { FFlowModule } from '@foblex/flow';
+import { FCanvasComponent, FFlowModule } from '@foblex/flow';
 import { Api, Feature, ProjectFull, Track, TrackStatus } from '../api.service';
 
 const STATUS_COLOR: Record<TrackStatus, string> = {
@@ -40,8 +40,8 @@ const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'D
 
         @if (view() === 'canvas') {
           <div class="flex-1 relative bg-slate-50">
-            <f-flow fDraggable class="block w-full h-full">
-              <f-canvas>
+            <f-flow fDraggable class="block w-full h-full" (fFullRendered)="onFullRendered()">
+              <f-canvas fZoom #canvas>
                 @for (f of features(); track f.id) {
                   <div
                     fNode
@@ -54,13 +54,13 @@ const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'D
                     <div
                       fNodeInput
                       [fInputId]="'in-' + f.id"
-                      fInputConnectableSide="left"
-                      class="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white z-10"></div>
+                      fInputConnectableSide="top"
+                      class="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white z-10"></div>
                     <div
                       fNodeOutput
                       [fOutputId]="'out-' + f.id"
-                      fOutputConnectableSide="right"
-                      class="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white z-10"></div>
+                      fOutputConnectableSide="bottom"
+                      class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white z-10"></div>
 
                     <div class="px-3 pt-2 pb-1 flex items-center justify-between rounded-t-lg overflow-hidden">
                       <span class="text-[10px] uppercase tracking-wide text-slate-400 truncate max-w-[140px]">
@@ -89,14 +89,22 @@ const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'D
                     <f-connection
                       [fOutputId]="'out-' + f.id"
                       [fInputId]="'in-' + dep.toFeatureId"
-                      fBehavior="floating"
-                      fType="bezier">
+                      fType="bezier"
+                      fOutputSide="bottom"
+                      fInputSide="top">
                       <f-connection-marker-arrow></f-connection-marker-arrow>
                     </f-connection>
                   }
                 }
               </f-canvas>
+              <f-minimap></f-minimap>
             </f-flow>
+
+            <div class="absolute top-4 right-4 flex gap-1 bg-white rounded-lg border border-line p-1 shadow-sm">
+              <button class="px-2 py-1 text-xs rounded hover:bg-slate-100" (click)="fit()">Fit</button>
+              <button class="px-2 py-1 text-xs rounded hover:bg-slate-100" (click)="zoom(1.2)">＋</button>
+              <button class="px-2 py-1 text-xs rounded hover:bg-slate-100" (click)="zoom(0.83)">－</button>
+            </div>
 
             <div class="absolute bottom-4 left-4 bg-white rounded-lg border border-line p-3 text-xs shadow-sm">
               <div class="font-medium mb-1">Status</div>
@@ -108,7 +116,7 @@ const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'D
                   </div>
                 }
               </div>
-              <div class="mt-2 text-slate-400">Click a strip segment to cycle status</div>
+              <div class="mt-2 text-slate-400">Drag empty canvas to pan · scroll to zoom</div>
             </div>
           </div>
         } @else {
@@ -158,7 +166,23 @@ export class ProjectPage {
   view = signal<'canvas' | 'dashboard'>('canvas');
   dashboard = signal<any | null>(null);
 
+  canvas = viewChild<FCanvasComponent>('canvas');
   statusKeys = STATUS_ORDER;
+
+  onFullRendered() {
+    setTimeout(() => this.fit(), 50);
+  }
+
+  fit() {
+    this.canvas()?.fitToScreen({ x: 60, y: 60 }, true);
+  }
+
+  zoom(factor: number) {
+    const c = this.canvas();
+    if (!c) return;
+    const current = (c as any).scale?.() ?? 1;
+    (c as any).setScale?.(current * factor);
+  }
 
   constructor() {
     queueMicrotask(() => this.load());
