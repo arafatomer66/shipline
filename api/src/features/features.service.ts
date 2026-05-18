@@ -82,15 +82,17 @@ export class FeaturesService {
 
     let canvasX = 40;
     let canvasY = 420;
+    let lastFeatureId: string | null = null;
     if (epicId) {
       const last = await this.prisma.feature.findFirst({
         where: { projectId, epicId },
         orderBy: { canvasY: 'desc' },
-        select: { canvasX: true, canvasY: true },
+        select: { id: true, canvasX: true, canvasY: true },
       });
       if (last) {
         canvasX = last.canvasX;
         canvasY = last.canvasY + 130;
+        lastFeatureId = last.id;
       } else {
         const epic = await this.prisma.epic.findUnique({
           where: { id: epicId },
@@ -100,7 +102,7 @@ export class FeaturesService {
       }
     }
 
-    return this.prisma.feature.create({
+    const feature = await this.prisma.feature.create({
       data: {
         projectId,
         epicId,
@@ -110,6 +112,19 @@ export class FeaturesService {
       },
       include: { epic: true, trackStatuses: true, outgoingDeps: true },
     });
+
+    if (lastFeatureId) {
+      await this.prisma.dependency.create({
+        data: {
+          projectId,
+          fromFeatureId: lastFeatureId,
+          toFeatureId: feature.id,
+          type: 'DEPENDS_ON',
+        },
+      });
+    }
+
+    return feature;
   }
 
   remove(id: string) {

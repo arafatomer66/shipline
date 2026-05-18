@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Api, ProjectSummary } from '../api.service';
+import { ToastService } from '../toast.service';
 
 @Component({
   selector: 'app-projects-list',
@@ -126,6 +127,7 @@ import { Api, ProjectSummary } from '../api.service';
 export class ProjectsListPage {
   private api = inject(Api);
   private router = inject(Router);
+  private toasts = inject(ToastService);
 
   projects = signal<ProjectSummary[]>([]);
   creating = signal(false);
@@ -161,11 +163,12 @@ export class ProjectsListPage {
     this.api.importExcel(files[0]).subscribe({
       next: (res) => {
         this.importing.set(false);
+        this.toasts.success(`Imported ${res.features} features across ${res.epics} epics`);
         this.router.navigate(['/p', res.projectId]);
       },
       error: (err) => {
         this.importing.set(false);
-        alert('Import failed: ' + (err?.error?.message ?? err.message));
+        this.toasts.error('Import failed: ' + (err?.error?.message ?? err.message));
       },
     });
   }

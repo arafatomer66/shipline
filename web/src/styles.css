@@ -41,6 +41,16 @@ f-flow f-connection.shipline-conn-deletable:hover [fMarker] polygon {
   stroke: #ef4444 !important;
 }
 
+/* Connector handles — must own pointer events for drag-to-connect to fire */
+.shipline-handle {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 5;
+}
+.shipline-handle.shipline-handle-out:hover {
+  box-shadow: 0 0 0 6px rgba(15, 23, 42, 0.08);
+}
+
 f-flow .f-connection .f-connection-selection {
   stroke: transparent !important;
   stroke-width: 14px !important;

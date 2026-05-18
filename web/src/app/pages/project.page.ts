@@ -6,6 +6,7 @@ import { forkJoin } from 'rxjs';
 import { FCanvasComponent, FFlowModule } from '@foblex/flow';
 import { Api, Feature, ProjectFull, Track, TrackStatus } from '../api.service';
 import { FeatureDetailPanel } from '../feature-detail-panel.component';
+import { ToastService } from '../toast.service';
 
 const STATUS_COLOR: Record<TrackStatus, string> = {
   NOT_STARTED: '#cbd5e1',
@@ -64,30 +65,75 @@ const FEATURE_TOP = 420;
                style="background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px); background-size: 22px 22px;">
 
             <!-- Left palette -->
-            <div class="absolute top-4 left-4 z-10 flex flex-col gap-1 bg-white/95 backdrop-blur rounded-xl border border-slate-200 p-1.5 shadow-sm" (click)="$event.stopPropagation()">
-              <button
-                class="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition group relative"
-                [disabled]="!selectedEpicId()"
-                (click)="addFeature()"
-                [title]="selectedEpicId() ? 'Add feature to selected epic' : 'Select an epic first'">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="5" width="18" height="14" rx="2"/>
-                  <path d="M12 9v6M9 12h6"/>
-                </svg>
-              </button>
-              <button
-                class="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-100 transition"
-                (click)="addEpic()"
-                title="Add epic">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <ellipse cx="12" cy="12" rx="9" ry="6"/>
-                  <path d="M12 9v6M9 12h6"/>
-                </svg>
-              </button>
-              <div class="h-px bg-slate-200 mx-1 my-0.5"></div>
-              <div class="w-10 px-1 py-1.5 text-[9px] text-center text-slate-400 leading-tight">
-                drag<br/>dot→dot<br/>to link
+            <div class="absolute top-4 left-4 z-10 flex items-start gap-2" (click)="$event.stopPropagation()">
+              <div class="flex flex-col gap-1 bg-white/95 backdrop-blur rounded-xl border border-slate-200 p-1.5 shadow-sm">
+                <button
+                  class="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                  [disabled]="!selectedEpicId()"
+                  [class.bg-slate-100]="creating() === 'feature'"
+                  (click)="toggleCreate('feature')"
+                  [title]="selectedEpicId() ? 'Add feature to selected epic' : 'Select an epic first'">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                    <path d="M12 9v6M9 12h6"/>
+                  </svg>
+                </button>
+                <button
+                  class="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-100 transition"
+                  [class.bg-slate-100]="creating() === 'epic'"
+                  (click)="toggleCreate('epic')"
+                  title="Add epic">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <ellipse cx="12" cy="12" rx="9" ry="6"/>
+                    <path d="M12 9v6M9 12h6"/>
+                  </svg>
+                </button>
+                <div class="h-px bg-slate-200 mx-1 my-0.5"></div>
+                <div class="w-10 px-1 py-1.5 text-[9px] text-center text-slate-400 leading-tight">
+                  drag<br/>dot→dot<br/>to link
+                </div>
               </div>
+
+              @if (creating() === 'feature') {
+                <div class="bg-white rounded-xl border border-slate-200 p-3 shadow-lg w-72 animate-pop-in">
+                  <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-2">
+                    New feature in <span class="text-ink font-medium normal-case tracking-normal">{{ selectedEpicName() }}</span>
+                  </div>
+                  <input
+                    #featInput
+                    [(ngModel)]="newItemName"
+                    (keydown.enter)="commitCreate()"
+                    (keydown.escape)="cancelCreate()"
+                    autofocus
+                    placeholder="Feature title…"
+                    class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20" />
+                  <div class="flex justify-end gap-2 mt-2">
+                    <button class="px-3 py-1.5 text-sm text-slate-500 hover:text-ink" (click)="cancelCreate()">Cancel</button>
+                    <button class="px-3 py-1.5 rounded-lg bg-ink text-white text-sm font-medium disabled:opacity-40"
+                            [disabled]="!newItemName.trim()"
+                            (click)="commitCreate()">Create</button>
+                  </div>
+                </div>
+              }
+              @if (creating() === 'epic') {
+                <div class="bg-white rounded-xl border border-slate-200 p-3 shadow-lg w-72 animate-pop-in">
+                  <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-2">New epic</div>
+                  <input
+                    #epicInput
+                    [(ngModel)]="newItemName"
+                    (keydown.enter)="commitCreate()"
+                    (keydown.escape)="cancelCreate()"
+                    autofocus
+                    placeholder="Epic name…"
+                    class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20" />
+                  <div class="flex justify-end gap-2 mt-2">
+                    <button class="px-3 py-1.5 text-sm text-slate-500 hover:text-ink" (click)="cancelCreate()">Cancel</button>
+                    <button class="px-3 py-1.5 rounded-lg bg-ink text-white text-sm font-medium disabled:opacity-40"
+                            [disabled]="!newItemName.trim()"
+                            (click)="commitCreate()">Create</button>
+                  </div>
+                </div>
+              }
             </div>
             <f-flow fDraggable class="block w-full h-full"
                     (fFullRendered)="onFullRendered()"
@@ -109,7 +155,7 @@ const FEATURE_TOP = 420;
                     fNodeOutput
                     fOutputId="out-project-root"
                     fOutputConnectableSide="bottom"
-                    class="mx-auto -mb-1.5 w-3 h-3 rounded-full bg-ink border-2 border-white"></div>
+                    class="shipline-handle shipline-handle-out mx-auto -mb-2.5 w-5 h-5 rounded-full bg-ink border-2 border-white cursor-crosshair"></div>
                 </div>
 
                 <!-- EPIC NODES: fNodeInput on host, fNodeOutput on child block -->
@@ -137,27 +183,30 @@ const FEATURE_TOP = 420;
                       fNodeOutput
                       [fOutputId]="'out-epic-' + e.id"
                       fOutputConnectableSide="bottom"
-                      class="mx-auto -mb-1.5 w-3 h-3 rounded-full bg-slate-400 border-2 border-white"></div>
+                      class="shipline-handle shipline-handle-out mx-auto -mb-2.5 w-5 h-5 rounded-full bg-slate-400 border-2 border-white cursor-crosshair"></div>
                   </div>
                 }
 
-                <!-- FEATURE NODES: fNodeInput on host, fNodeOutput on child block -->
+                <!-- FEATURE NODES -->
                 @for (f of features(); track f.id) {
                   <div
                     fNode fDragHandle
-                    fNodeInput
                     [fNodeId]="f.id"
-                    [fInputId]="'in-' + f.id"
-                    fInputConnectableSide="top"
                     [fNodePosition]="{ x: f.canvasX, y: f.canvasY }"
                     (fNodePositionChange)="onMove(f.id, $event)"
-                    class="w-64 rounded-lg border border-line bg-white shadow-sm transition-all cursor-pointer hover:border-slate-400 hover:shadow-md"
+                    class="relative w-64 rounded-lg border border-line bg-white shadow-sm transition-all cursor-pointer hover:border-slate-400 hover:shadow-md"
                     [class.opacity-25]="dimFeature(f.epicId)"
                     [class.!border-ink]="selectedFeatureId() === f.id"
                     [class.ring-2]="selectedFeatureId() === f.id"
                     [class.ring-ink]="selectedFeatureId() === f.id"
                     (click)="openFeature(f, $event)"
                   >
+                    <div
+                      fNodeInput
+                      [fInputId]="'in-' + f.id"
+                      fInputConnectableSide="top"
+                      (click)="$event.stopPropagation()"
+                      class="shipline-handle absolute left-1/2 -translate-x-1/2 -top-2.5 w-5 h-5 rounded-full bg-slate-300 border-2 border-white"></div>
                     <div class="px-3 pt-2 pb-1 flex items-center justify-between">
                       <span class="text-[10px] uppercase tracking-wide text-slate-400 truncate max-w-[140px]">
                         {{ f.epic?.name }}@if (f.externalId) { · {{ f.externalId }} }
@@ -181,7 +230,8 @@ const FEATURE_TOP = 420;
                       fNodeOutput
                       [fOutputId]="'out-' + f.id"
                       fOutputConnectableSide="bottom"
-                      class="mx-auto -mb-1.5 w-3 h-3 rounded-full bg-slate-300 border-2 border-white"></div>
+                      (click)="$event.stopPropagation()"
+                      class="shipline-handle shipline-handle-out mx-auto -mb-2.5 w-5 h-5 rounded-full bg-slate-300 border-2 border-white cursor-crosshair hover:bg-ink hover:scale-110 transition"></div>
                   </div>
                 }
 
@@ -341,23 +391,47 @@ export class ProjectPage {
     }));
   }
 
-  addFeature() {
-    const epicId = this.selectedEpicId();
-    if (!epicId) return;
-    const title = prompt('Feature title:');
-    if (!title?.trim()) return;
-    this.api.createFeature(this.id(), title.trim(), epicId).subscribe((f) => {
-      this.features.update(list => [...list, { ...f, outgoingDeps: f.outgoingDeps ?? [] } as Feature]);
-      this.selectedFeatureId.set(f.id);
-    });
+  toggleCreate(kind: 'feature' | 'epic') {
+    if (kind === 'feature' && !this.selectedEpicId()) {
+      this.toasts.info('Select an epic first');
+      return;
+    }
+    this.creating.update(cur => cur === kind ? null : kind);
+    this.newItemName = '';
   }
 
-  addEpic() {
-    const name = prompt('Epic name:');
-    if (!name?.trim()) return;
-    this.api.createEpic(this.id(), name.trim()).subscribe((e) => {
-      this.project.update(p => p ? { ...p, epics: [...p.epics, e] } : p);
-    });
+  cancelCreate() {
+    this.creating.set(null);
+    this.newItemName = '';
+  }
+
+  commitCreate() {
+    const kind = this.creating();
+    const name = this.newItemName.trim();
+    if (!kind || !name) return;
+
+    if (kind === 'feature') {
+      const epicId = this.selectedEpicId();
+      if (!epicId) return;
+      this.api.createFeature(this.id(), name, epicId).subscribe({
+        next: (f) => {
+          this.features.update(list => [...list, { ...f, outgoingDeps: f.outgoingDeps ?? [] } as Feature]);
+          this.selectedFeatureId.set(f.id);
+          this.cancelCreate();
+          this.toasts.success(`Added "${f.title}"`);
+        },
+        error: (err) => this.toasts.error('Could not create feature: ' + (err?.error?.message ?? err.message)),
+      });
+    } else {
+      this.api.createEpic(this.id(), name).subscribe({
+        next: (e) => {
+          this.project.update(p => p ? { ...p, epics: [...p.epics, e] } : p);
+          this.cancelCreate();
+          this.toasts.success(`Added epic "${e.name}"`);
+        },
+        error: (err) => this.toasts.error('Could not create epic: ' + (err?.error?.message ?? err.message)),
+      });
+    }
   }
 
   onCreateConnection(ev: { sourceId?: string; targetId?: string; fOutputId?: string; fInputId?: string } | any) {
@@ -379,14 +453,31 @@ export class ProjectPage {
 
   onConnectionClick(c: { depId: string | null; fromFid?: string; toFid?: string }, ev: MouseEvent) {
     ev.stopPropagation();
-    if (!c.depId) return;
-    if (!confirm('Delete this connection?')) return;
-    this.api.deleteDependency(c.depId).subscribe(() => {
-      this.features.update(list => list.map(x =>
-        x.id === c.fromFid
-          ? { ...x, outgoingDeps: x.outgoingDeps.filter(d => d.id !== c.depId) }
-          : x
-      ));
+    if (!c.depId || !c.fromFid) return;
+    const depId = c.depId;
+    const fromFid = c.fromFid;
+    const toFid = c.toFid!;
+    this.api.deleteDependency(depId).subscribe({
+      next: () => {
+        this.features.update(list => list.map(x =>
+          x.id === fromFid
+            ? { ...x, outgoingDeps: x.outgoingDeps.filter(d => d.id !== depId) }
+            : x
+        ));
+        this.toasts.success('Connection removed', {
+          action: {
+            label: 'Undo',
+            run: () => this.api.createDependency(fromFid, toFid).subscribe(dep => {
+              this.features.update(list => list.map(x =>
+                x.id === fromFid
+                  ? { ...x, outgoingDeps: [...x.outgoingDeps, { id: dep.id, toFeatureId: toFid, type: 'DEPENDS_ON', label: null }] }
+                  : x
+              ));
+            }),
+          },
+        });
+      },
+      error: (err) => this.toasts.error('Could not delete: ' + (err?.error?.message ?? err.message)),
     });
   }
 
@@ -426,9 +517,12 @@ export class ProjectPage {
   });
 
   canvas = viewChild<FCanvasComponent>('canvas');
+  private toasts = inject(ToastService);
   statusKeys = STATUS_ORDER;
   colWidth = COL_WIDTH;
   epicY = EPIC_Y;
+  creating = signal<'feature' | 'epic' | null>(null);
+  newItemName = '';
 
   rootPos = computed(() => {
     const p = this.project();

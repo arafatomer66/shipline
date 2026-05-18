@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, output, signal } from '@ang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Api, Feature, FeatureUpdate, Track, TrackStatus } from './api.service';
+import { ToastService } from './toast.service';
 
 const PRIORITY = ['P0','P1','P2','P3'] as const;
 const EFFORT  = ['XS','S','M','L','XL'] as const;
@@ -197,16 +198,28 @@ const STATUS_COLOR: Record<TrackStatus, string> = {
         </div>
 
         <!-- Footer -->
-        <div class="flex items-center justify-between px-6 py-3 border-t border-slate-100 bg-slate-50">
-          <div class="text-xs text-slate-400">
-            @if (dirty()) { <span class="text-amber-600">● unsaved</span> } @else { <span>● saved</span> }
-            @if (saving()) { <span class="ml-2">saving…</span> }
-          </div>
-          <div class="flex gap-2">
-            <button class="px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-200" (click)="requestClose()">Close</button>
-            <button class="px-4 py-1.5 rounded-lg bg-ink text-white text-sm font-medium disabled:opacity-40 hover:opacity-90"
-                    [disabled]="!dirty() || saving()" (click)="save()">Save</button>
-          </div>
+        <div class="px-6 py-3 border-t border-slate-100 bg-slate-50">
+          @if (showDiscardPrompt()) {
+            <div class="flex items-center justify-between gap-3">
+              <div class="text-sm text-amber-700">You have unsaved changes.</div>
+              <div class="flex gap-2">
+                <button class="px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-200" (click)="cancelDiscard()">Keep editing</button>
+                <button class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700" (click)="confirmDiscard()">Discard</button>
+              </div>
+            </div>
+          } @else {
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-slate-400">
+                @if (dirty()) { <span class="text-amber-600">● unsaved</span> } @else { <span>● saved</span> }
+                @if (saving()) { <span class="ml-2">saving…</span> }
+              </div>
+              <div class="flex gap-2">
+                <button class="px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-200" (click)="requestClose()">Close</button>
+                <button class="px-4 py-1.5 rounded-lg bg-ink text-white text-sm font-medium disabled:opacity-40 hover:opacity-90"
+                        [disabled]="!dirty() || saving()" (click)="save()">Save</button>
+              </div>
+            </div>
+          }
         </div>
       </aside>
     }
@@ -226,6 +239,8 @@ export class FeatureDetailPanel {
   close = output<void>();
 
   private api = inject(Api);
+  private toasts = inject(ToastService);
+  showDiscardPrompt = signal(false);
 
   priorities = PRIORITY;
   efforts    = EFFORT;
@@ -282,8 +297,20 @@ export class FeatureDetailPanel {
   }
 
   requestClose() {
-    if (this.dirty() && !confirm('Discard unsaved changes?')) return;
+    if (this.dirty()) {
+      this.showDiscardPrompt.set(true);
+      return;
+    }
     this.close.emit();
+  }
+
+  confirmDiscard() {
+    this.showDiscardPrompt.set(false);
+    this.close.emit();
+  }
+
+  cancelDiscard() {
+    this.showDiscardPrompt.set(false);
   }
 
   save() {
@@ -295,10 +322,11 @@ export class FeatureDetailPanel {
         this.saving.set(false);
         this.dirty.set(false);
         this.saved.emit(updated);
+        this.toasts.success('Saved');
       },
       error: (err) => {
         this.saving.set(false);
-        alert('Save failed: ' + (err?.error?.message ?? err.message));
+        this.toasts.error('Save failed: ' + (err?.error?.message ?? err.message));
       },
     });
   }
