@@ -76,4 +76,43 @@ export class FeaturesService {
     const idx = order.indexOf(current);
     return order[(idx + 1) % order.length];
   }
+
+  async create(projectId: string, dto: { title: string; epicId?: string | null }) {
+    const epicId = dto.epicId ?? null;
+
+    let canvasX = 40;
+    let canvasY = 420;
+    if (epicId) {
+      const last = await this.prisma.feature.findFirst({
+        where: { projectId, epicId },
+        orderBy: { canvasY: 'desc' },
+        select: { canvasX: true, canvasY: true },
+      });
+      if (last) {
+        canvasX = last.canvasX;
+        canvasY = last.canvasY + 130;
+      } else {
+        const epic = await this.prisma.epic.findUnique({
+          where: { id: epicId },
+          select: { order: true },
+        });
+        canvasX = (epic?.order ?? 0) * 320 + 40;
+      }
+    }
+
+    return this.prisma.feature.create({
+      data: {
+        projectId,
+        epicId,
+        title: dto.title,
+        canvasX,
+        canvasY,
+      },
+      include: { epic: true, trackStatuses: true, outgoingDeps: true },
+    });
+  }
+
+  remove(id: string) {
+    return this.prisma.feature.delete({ where: { id } });
+  }
 }

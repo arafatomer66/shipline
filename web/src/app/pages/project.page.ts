@@ -62,7 +62,36 @@ const FEATURE_TOP = 420;
         @if (view() === 'canvas') {
           <div class="flex-1 relative bg-slate-50" (click)="clearSelection()"
                style="background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px); background-size: 22px 22px;">
-            <f-flow fDraggable class="block w-full h-full" (fFullRendered)="onFullRendered()">
+
+            <!-- Left palette -->
+            <div class="absolute top-4 left-4 z-10 flex flex-col gap-1 bg-white/95 backdrop-blur rounded-xl border border-slate-200 p-1.5 shadow-sm" (click)="$event.stopPropagation()">
+              <button
+                class="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition group relative"
+                [disabled]="!selectedEpicId()"
+                (click)="addFeature()"
+                [title]="selectedEpicId() ? 'Add feature to selected epic' : 'Select an epic first'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="5" width="18" height="14" rx="2"/>
+                  <path d="M12 9v6M9 12h6"/>
+                </svg>
+              </button>
+              <button
+                class="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-100 transition"
+                (click)="addEpic()"
+                title="Add epic">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <ellipse cx="12" cy="12" rx="9" ry="6"/>
+                  <path d="M12 9v6M9 12h6"/>
+                </svg>
+              </button>
+              <div class="h-px bg-slate-200 mx-1 my-0.5"></div>
+              <div class="w-10 px-1 py-1.5 text-[9px] text-center text-slate-400 leading-tight">
+                drag<br/>dot→dot<br/>to link
+              </div>
+            </div>
+            <f-flow fDraggable class="block w-full h-full"
+                    (fFullRendered)="onFullRendered()"
+                    (fCreateConnection)="onCreateConnection($event)">
               <f-canvas fZoom #canvas>
 
                 <!-- PROJECT ROOT NODE (output as child block) -->
@@ -165,10 +194,17 @@ const FEATURE_TOP = 420;
                     [fOutputId]="c.from"
                     [fInputId]="c.to"
                     fInputSide="calculate"
-                    [class.shipline-conn-dim]="dimConnection(c.epicId)">
+                    [class.shipline-conn-dim]="dimConnection(c.epicId)"
+                    [class.shipline-conn-deletable]="c.depId"
+                    (click)="onConnectionClick(c, $event)">
                     <f-connection-marker-arrow></f-connection-marker-arrow>
                   </f-connection>
                 }
+
+                <!-- preview line while user drags to connect -->
+                <f-connection-for-create fType="segment" [fOffset]="24">
+                  <f-connection-marker-arrow></f-connection-marker-arrow>
+                </f-connection-for-create>
 
               </f-canvas>
               <f-minimap></f-minimap>
@@ -305,6 +341,67 @@ export class ProjectPage {
     }));
   }
 
+  addFeature() {
+    const epicId = this.selectedEpicId();
+    if (!epicId) return;
+    const title = prompt('Feature title:');
+    if (!title?.trim()) return;
+    this.api.createFeature(this.id(), title.trim(), epicId).subscribe((f) => {
+      this.features.update(list => [...list, { ...f, outgoingDeps: f.outgoingDeps ?? [] } as Feature]);
+      this.selectedFeatureId.set(f.id);
+    });
+  }
+
+  addEpic() {
+    const name = prompt('Epic name:');
+    if (!name?.trim()) return;
+    this.api.createEpic(this.id(), name.trim()).subscribe((e) => {
+      this.project.update(p => p ? { ...p, epics: [...p.epics, e] } : p);
+    });
+  }
+
+  onCreateConnection(ev: { sourceId?: string; targetId?: string; fOutputId?: string; fInputId?: string } | any) {
+    const src: string = ev?.sourceId ?? ev?.fOutputId;
+    const tgt: string = ev?.targetId ?? ev?.fInputId;
+    if (!src || !tgt) return;
+    const fromFid = this.featureIdFromOutputId(src);
+    const toFid = this.featureIdFromInputId(tgt);
+    if (!fromFid || !toFid) return;
+    if (fromFid === toFid) return;
+    this.api.createDependency(fromFid, toFid).subscribe(dep => {
+      this.features.update(list => list.map(x =>
+        x.id === fromFid
+          ? { ...x, outgoingDeps: [...x.outgoingDeps, { id: dep.id, toFeatureId: toFid, type: 'DEPENDS_ON', label: null }] }
+          : x
+      ));
+    });
+  }
+
+  onConnectionClick(c: { depId: string | null; fromFid?: string; toFid?: string }, ev: MouseEvent) {
+    ev.stopPropagation();
+    if (!c.depId) return;
+    if (!confirm('Delete this connection?')) return;
+    this.api.deleteDependency(c.depId).subscribe(() => {
+      this.features.update(list => list.map(x =>
+        x.id === c.fromFid
+          ? { ...x, outgoingDeps: x.outgoingDeps.filter(d => d.id !== c.depId) }
+          : x
+      ));
+    });
+  }
+
+  private featureIdFromOutputId(id: string): string | null {
+    if (id.startsWith('out-epic-')) return null;
+    if (id === 'out-project-root') return null;
+    if (id.startsWith('out-')) return id.slice(4);
+    return null;
+  }
+  private featureIdFromInputId(id: string): string | null {
+    if (id.startsWith('in-epic-')) return null;
+    if (id.startsWith('in-')) return id.slice(3);
+    return null;
+  }
+
   dimEpic(epicId: string) {
     const sel = this.selectedEpicId();
     return sel !== null && sel !== epicId;
@@ -360,25 +457,33 @@ export class ProjectPage {
   });
 
   allConnections = computed(() => {
-    const out: { id: string; from: string; to: string; epicId: string | null }[] = [];
+    const out: { id: string; from: string; to: string; epicId: string | null; depId: string | null; fromFid?: string; toFid?: string }[] = [];
     const p = this.project();
     const feats = this.features();
     if (!p) return out;
 
     for (const e of p.epics) {
-      out.push({ id: 'pe-' + e.id, from: 'out-project-root', to: 'in-epic-' + e.id, epicId: e.id });
+      out.push({ id: 'pe-' + e.id, from: 'out-project-root', to: 'in-epic-' + e.id, epicId: e.id, depId: null });
     }
     const firstByEpic = this.firstFeatureOfEpic();
     for (const e of p.epics) {
       const fid = firstByEpic[e.id];
-      if (fid) out.push({ id: 'ef-' + e.id, from: 'out-epic-' + e.id, to: 'in-' + fid, epicId: e.id });
+      if (fid) out.push({ id: 'ef-' + e.id, from: 'out-epic-' + e.id, to: 'in-' + fid, epicId: e.id, depId: null });
     }
     const featureById = new Map(feats.map(f => [f.id, f]));
     for (const f of feats) {
       for (const dep of f.outgoingDeps) {
         const target = featureById.get(dep.toFeatureId);
         const epicId = f.epicId && target && target.epicId === f.epicId ? f.epicId : null;
-        out.push({ id: 'ff-' + dep.id, from: 'out-' + f.id, to: 'in-' + dep.toFeatureId, epicId });
+        out.push({
+          id: 'ff-' + dep.id,
+          from: 'out-' + f.id,
+          to: 'in-' + dep.toFeatureId,
+          epicId,
+          depId: dep.id,
+          fromFid: f.id,
+          toFid: dep.toFeatureId,
+        });
       }
     }
     return out;

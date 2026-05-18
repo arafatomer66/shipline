@@ -28,6 +28,19 @@ f-flow f-connection.shipline-conn-dim [fMarker] polygon {
   opacity: 0.25 !important;
 }
 
+f-flow f-connection.shipline-conn-deletable {
+  cursor: pointer;
+}
+f-flow f-connection.shipline-conn-deletable:hover .f-connection-path {
+  stroke: #ef4444 !important;
+  stroke-width: 3px !important;
+}
+f-flow f-connection.shipline-conn-deletable:hover [fMarker] path,
+f-flow f-connection.shipline-conn-deletable:hover [fMarker] polygon {
+  fill: #ef4444 !important;
+  stroke: #ef4444 !important;
+}
+
 f-flow .f-connection .f-connection-selection {
   stroke: transparent !important;
   stroke-width: 14px !important;

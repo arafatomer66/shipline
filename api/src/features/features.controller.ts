@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { BackendNeeded, Effort, Priority, PrototypeState, TrackStatus } from '@prisma/client';
 import { IsEnum, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
 import { FeaturesService } from './features.service';
@@ -12,6 +12,12 @@ class SetTrackStatusDto {
   @IsString() trackId!: string;
   @IsEnum(['NOT_STARTED','IN_PROGRESS','BLOCKED','DONE','NA'])
   status!: TrackStatus;
+}
+
+class CreateFeatureDto {
+  @IsString() projectId!: string;
+  @IsString() @MaxLength(300) title!: string;
+  @IsOptional() @IsString() epicId?: string | null;
 }
 
 class UpdateFeatureDto {
@@ -41,6 +47,16 @@ export class FeaturesController {
   @Get()
   list(@Query('projectId') projectId: string) {
     return this.features.listByProject(projectId);
+  }
+
+  @Post()
+  create(@Body() dto: CreateFeatureDto) {
+    return this.features.create(dto.projectId, { title: dto.title, epicId: dto.epicId ?? null });
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.features.remove(id);
   }
 
   @Get(':id')

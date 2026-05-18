@@ -86,6 +86,24 @@ export class Api {
   updateFeature(id: string, patch: FeatureUpdate): Observable<Feature> {
     return this.http.patch<Feature>(`${BASE}/features/${id}`, patch);
   }
+  createFeature(projectId: string, title: string, epicId?: string | null): Observable<Feature> {
+    return this.http.post<Feature>(`${BASE}/features`, { projectId, title, epicId: epicId ?? null });
+  }
+  deleteFeature(id: string) {
+    return this.http.delete<Feature>(`${BASE}/features/${id}`);
+  }
+  createDependency(fromFeatureId: string, toFeatureId: string) {
+    return this.http.post<{id: string; fromFeatureId: string; toFeatureId: string}>(`${BASE}/dependencies`, { fromFeatureId, toFeatureId });
+  }
+  deleteDependency(id: string) {
+    return this.http.delete(`${BASE}/dependencies/${id}`);
+  }
+  deleteDependencyBetween(fromFeatureId: string, toFeatureId: string) {
+    return this.http.delete(`${BASE}/dependencies?from=${fromFeatureId}&to=${toFeatureId}`);
+  }
+  createEpic(projectId: string, name: string) {
+    return this.http.post<Epic>(`${BASE}/epics`, { projectId, name });
+  }
   setTrackStatus(featureId: string, trackId: string, status: TrackStatus) {
     return this.http.patch(`${BASE}/features/${featureId}/track-status`, { trackId, status });
   }
