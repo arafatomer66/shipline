@@ -112,7 +112,7 @@ export class ImportService {
     const epicFeatureIds = new Map<string, string[]>();
     const COL_WIDTH = 320;
     const FEATURE_TOP = 420;
-    const ROW_HEIGHT = 130;
+    const ROW_HEIGHT = 170;
     let eIndex = 0;
     for (const [name] of epicCache) {
       epicX.set(name, eIndex * COL_WIDTH + 40);
@@ -260,7 +260,7 @@ export class ImportService {
     });
     const COL_WIDTH = 320;
     const FEATURE_TOP = 420;
-    const ROW_HEIGHT = 130;
+    const ROW_HEIGHT = 170;
     const epicX = new Map(epics.map((e, i) => [e.id, i * COL_WIDTH + 40]));
 
     let posUpdated = 0;

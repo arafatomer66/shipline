@@ -183,7 +183,7 @@ const FEATURE_TOP = 420;
                       fNodeOutput
                       [fOutputId]="'out-epic-' + e.id"
                       fOutputConnectableSide="bottom"
-                      class="shipline-handle shipline-handle-out mx-auto -mb-2.5 w-5 h-5 rounded-full bg-slate-400 border-2 border-white cursor-crosshair"></div>
+                      class="shipline-handle shipline-handle-out mx-auto -mb-2 w-4 h-4 rounded-full bg-slate-400 border-2 border-white cursor-crosshair hover:bg-ink hover:scale-125 transition"></div>
                   </div>
                 }
 
@@ -206,7 +206,7 @@ const FEATURE_TOP = 420;
                       [fInputId]="'in-' + f.id"
                       fInputConnectableSide="top"
                       (click)="$event.stopPropagation()"
-                      class="shipline-handle absolute left-1/2 -translate-x-1/2 -top-2.5 w-5 h-5 rounded-full bg-slate-300 border-2 border-white"></div>
+                      class="shipline-handle absolute left-1/2 -translate-x-1/2 -top-1.5 w-3 h-3 rounded-full bg-slate-300 border-2 border-white"></div>
                     <div class="px-3 pt-2 pb-1 flex items-center justify-between">
                       <span class="text-[10px] uppercase tracking-wide text-slate-400 truncate max-w-[140px]">
                         {{ f.epic?.name }}@if (f.externalId) { · {{ f.externalId }} }
@@ -231,7 +231,7 @@ const FEATURE_TOP = 420;
                       [fOutputId]="'out-' + f.id"
                       fOutputConnectableSide="bottom"
                       (click)="$event.stopPropagation()"
-                      class="shipline-handle shipline-handle-out mx-auto -mb-2.5 w-5 h-5 rounded-full bg-slate-300 border-2 border-white cursor-crosshair hover:bg-ink hover:scale-110 transition"></div>
+                      class="shipline-handle shipline-handle-out mx-auto -mb-2 w-4 h-4 rounded-full bg-slate-400 border-2 border-white cursor-crosshair hover:bg-ink hover:scale-125 transition"></div>
                   </div>
                 }
 

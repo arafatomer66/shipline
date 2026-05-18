@@ -91,7 +91,7 @@ export class FeaturesService {
       });
       if (last) {
         canvasX = last.canvasX;
-        canvasY = last.canvasY + 130;
+        canvasY = last.canvasY + 170;
         lastFeatureId = last.id;
       } else {
         const epic = await this.prisma.epic.findUnique({
