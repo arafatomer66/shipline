@@ -110,9 +110,12 @@ export class ImportService {
     const perEpicCount = new Map<string, number>();
     const epicX = new Map<string, number>();
     const epicFeatureIds = new Map<string, string[]>();
+    const COL_WIDTH = 320;
+    const FEATURE_TOP = 420;
+    const ROW_HEIGHT = 130;
     let eIndex = 0;
     for (const [name] of epicCache) {
-      epicX.set(name, eIndex * 300 + 40);
+      epicX.set(name, eIndex * COL_WIDTH + 40);
       eIndex += 1;
     }
 
@@ -122,7 +125,7 @@ export class ImportService {
       const epicId = epicCache.get(epicName)!;
 
       const x = epicX.get(epicName) ?? 40;
-      const y = (perEpicCount.get(epicName) ?? 0) * 130 + 80;
+      const y = FEATURE_TOP + (perEpicCount.get(epicName) ?? 0) * ROW_HEIGHT;
       perEpicCount.set(epicName, (perEpicCount.get(epicName) ?? 0) + 1);
 
       const prototypeState = parsePrototype(r['prototype_state']);
@@ -255,15 +258,18 @@ export class ImportService {
       orderBy: { order: 'asc' },
       select: { id: true },
     });
-    const epicX = new Map(epics.map((e, i) => [e.id, i * 300 + 40]));
+    const COL_WIDTH = 320;
+    const FEATURE_TOP = 420;
+    const ROW_HEIGHT = 130;
+    const epicX = new Map(epics.map((e, i) => [e.id, i * COL_WIDTH + 40]));
 
     let posUpdated = 0;
     for (const [epicKey, ids] of byEpic.entries()) {
-      const x = epicKey === '__none__' ? epics.length * 300 + 40 : (epicX.get(epicKey) ?? 40);
+      const x = epicKey === '__none__' ? epics.length * COL_WIDTH + 40 : (epicX.get(epicKey) ?? 40);
       for (let i = 0; i < ids.length; i++) {
         await this.prisma.feature.update({
           where: { id: ids[i] },
-          data: { canvasX: x, canvasY: i * 130 + 80 },
+          data: { canvasX: x, canvasY: FEATURE_TOP + i * ROW_HEIGHT },
         });
         posUpdated += 1;
       }

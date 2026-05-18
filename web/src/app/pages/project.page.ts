@@ -1,4 +1,4 @@
-import { Component, inject, input, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, input, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FCanvasComponent, FFlowModule } from '@foblex/flow';
@@ -13,6 +13,10 @@ const STATUS_COLOR: Record<TrackStatus, string> = {
 };
 
 const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'DONE', 'NA'];
+
+const COL_WIDTH = 320;
+const EPIC_Y = 220;
+const FEATURE_TOP = 420;
 
 @Component({
   selector: 'app-project',
@@ -42,25 +46,58 @@ const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'D
           <div class="flex-1 relative bg-slate-50">
             <f-flow fDraggable class="block w-full h-full" (fFullRendered)="onFullRendered()">
               <f-canvas fZoom #canvas>
+
+                <!-- PROJECT ROOT NODE -->
+                <div
+                  fNode fDragHandle
+                  fNodeOutput
+                  fNodeId="project-root"
+                  fOutputId="out-project-root"
+                  fOutputConnectableSide="bottom"
+                  [fNodePosition]="rootPos()"
+                  class="relative w-56 rounded-2xl border-2 border-ink bg-white shadow-md px-4 py-3 text-center"
+                >
+                  <div class="text-[10px] uppercase tracking-wider text-slate-400">Project</div>
+                  <div class="font-semibold text-base mt-0.5 truncate">{{ p.name }}</div>
+                  <div class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-ink border-2 border-white pointer-events-none"></div>
+                </div>
+
+                <!-- EPIC NODES -->
+                @for (e of p.epics; track e.id; let i = $index) {
+                  <div
+                    fNode fDragHandle
+                    fNodeInput fNodeOutput
+                    [fNodeId]="'epic-' + e.id"
+                    [fInputId]="'in-epic-' + e.id"
+                    [fOutputId]="'out-epic-' + e.id"
+                    fInputConnectableSide="top"
+                    fOutputConnectableSide="bottom"
+                    [fNodePosition]="{ x: i * colWidth + 40 + 24, y: epicY }"
+                    class="relative w-56 rounded-full border-2 border-slate-300 bg-white shadow-sm px-4 py-3 text-center"
+                  >
+                    <div class="font-medium text-sm truncate">{{ e.name }}</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">{{ featuresPerEpic()[e.id] || 0 }} features</div>
+                    <div class="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400 border-2 border-white pointer-events-none"></div>
+                    <div class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400 border-2 border-white pointer-events-none"></div>
+                  </div>
+                }
+
+                <!-- FEATURE NODES -->
                 @for (f of features(); track f.id) {
                   <div
-                    fNode
-                    fDragHandle
+                    fNode fDragHandle
+                    fNodeInput fNodeOutput
                     [fNodeId]="f.id"
+                    [fInputId]="'in-' + f.id"
+                    [fOutputId]="'out-' + f.id"
+                    fInputConnectableSide="top"
+                    fOutputConnectableSide="bottom"
                     [fNodePosition]="{ x: f.canvasX, y: f.canvasY }"
                     (fNodePositionChange)="onMove(f.id, $event)"
                     class="relative w-64 rounded-lg border border-line bg-white shadow-sm overflow-visible"
                   >
-                    <div
-                      fNodeInput
-                      [fInputId]="'in-' + f.id"
-                      fInputConnectableSide="top"
-                      class="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white z-10"></div>
-                    <div
-                      fNodeOutput
-                      [fOutputId]="'out-' + f.id"
-                      fOutputConnectableSide="bottom"
-                      class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white z-10"></div>
+                    <div class="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white pointer-events-none"></div>
+                    <div class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white pointer-events-none"></div>
 
                     <div class="px-3 pt-2 pb-1 flex items-center justify-between rounded-t-lg overflow-hidden">
                       <span class="text-[10px] uppercase tracking-wide text-slate-400 truncate max-w-[140px]">
@@ -84,6 +121,33 @@ const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'D
                   </div>
                 }
 
+                <!-- PROJECT → EPIC edges -->
+                @for (e of p.epics; track e.id) {
+                  <f-connection
+                    fOutputId="out-project-root"
+                    [fInputId]="'in-epic-' + e.id"
+                    fType="bezier"
+                    fOutputSide="bottom"
+                    fInputSide="top">
+                    <f-connection-marker-arrow></f-connection-marker-arrow>
+                  </f-connection>
+                }
+
+                <!-- EPIC → first FEATURE edges -->
+                @for (e of p.epics; track e.id) {
+                  @if (firstFeatureOfEpic()[e.id]; as firstFid) {
+                    <f-connection
+                      [fOutputId]="'out-epic-' + e.id"
+                      [fInputId]="'in-' + firstFid"
+                      fType="bezier"
+                      fOutputSide="bottom"
+                      fInputSide="top">
+                      <f-connection-marker-arrow></f-connection-marker-arrow>
+                    </f-connection>
+                  }
+                }
+
+                <!-- FEATURE → FEATURE edges (from DB) -->
                 @for (f of features(); track f.id) {
                   @for (dep of f.outgoingDeps; track dep.id) {
                     <f-connection
@@ -96,12 +160,14 @@ const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'D
                     </f-connection>
                   }
                 }
+
               </f-canvas>
               <f-minimap></f-minimap>
             </f-flow>
 
             <div class="absolute top-4 right-4 flex gap-1 bg-white rounded-lg border border-line p-1 shadow-sm">
               <button class="px-2 py-1 text-xs rounded hover:bg-slate-100" (click)="fit()">Fit</button>
+              <button class="px-2 py-1 text-xs rounded hover:bg-slate-100" (click)="resetView()">1:1</button>
               <button class="px-2 py-1 text-xs rounded hover:bg-slate-100" (click)="zoom(1.2)">＋</button>
               <button class="px-2 py-1 text-xs rounded hover:bg-slate-100" (click)="zoom(0.83)">－</button>
             </div>
@@ -116,7 +182,7 @@ const STATUS_ORDER: TrackStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'D
                   </div>
                 }
               </div>
-              <div class="mt-2 text-slate-400">Drag empty canvas to pan · scroll to zoom</div>
+              <div class="mt-2 text-slate-400">Drag canvas to pan · scroll to zoom</div>
             </div>
           </div>
         } @else {
@@ -168,21 +234,34 @@ export class ProjectPage {
 
   canvas = viewChild<FCanvasComponent>('canvas');
   statusKeys = STATUS_ORDER;
+  colWidth = COL_WIDTH;
+  epicY = EPIC_Y;
 
-  onFullRendered() {
-    setTimeout(() => this.fit(), 50);
-  }
+  rootPos = computed(() => {
+    const p = this.project();
+    const n = p ? p.epics.length : 0;
+    const totalW = Math.max(1, n) * COL_WIDTH;
+    return { x: totalW / 2 - 112 + 40, y: 40 };
+  });
 
-  fit() {
-    this.canvas()?.fitToScreen({ x: 60, y: 60 }, true);
-  }
+  featuresPerEpic = computed(() => {
+    const map: Record<string, number> = {};
+    for (const f of this.features()) {
+      if (!f.epicId) continue;
+      map[f.epicId] = (map[f.epicId] ?? 0) + 1;
+    }
+    return map;
+  });
 
-  zoom(factor: number) {
-    const c = this.canvas();
-    if (!c) return;
-    const current = (c as any).scale?.() ?? 1;
-    (c as any).setScale?.(current * factor);
-  }
+  firstFeatureOfEpic = computed(() => {
+    const map: Record<string, string> = {};
+    const sorted = [...this.features()].sort((a, b) => a.canvasY - b.canvasY);
+    for (const f of sorted) {
+      if (!f.epicId) continue;
+      if (!map[f.epicId]) map[f.epicId] = f.id;
+    }
+    return map;
+  });
 
   constructor() {
     queueMicrotask(() => this.load());
@@ -234,5 +313,39 @@ export class ProjectPage {
     const total = STATUS_ORDER.reduce((s, k) => s + (counts[k] || 0), 0);
     if (!total) return 0;
     return Math.round(((counts['DONE'] || 0) / total) * 100);
+  }
+
+  onFullRendered() {
+    requestAnimationFrame(() => this.fit());
+  }
+
+  fit() {
+    try {
+      this.canvas()?.fitToScreen({ x: 60, y: 60 }, true);
+    } catch (e) {
+      console.warn('fitToScreen failed', e);
+    }
+  }
+
+  resetView() {
+    try {
+      this.canvas()?.resetScaleAndCenter(true);
+    } catch (e) {
+      console.warn('resetScaleAndCenter failed', e);
+    }
+  }
+
+  zoom(factor: number) {
+    const c = this.canvas();
+    if (!c) return;
+    try {
+      const current = c.getScale();
+      const host = (c as any).hostElement as HTMLElement | undefined;
+      const rect = host?.getBoundingClientRect();
+      const center = rect ? { x: rect.width / 2, y: rect.height / 2 } : { x: 0, y: 0 };
+      c.setScale(Math.max(0.1, Math.min(3, current * factor)), center);
+    } catch (e) {
+      console.warn('zoom failed', e);
+    }
   }
 }
