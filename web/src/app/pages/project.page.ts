@@ -44,7 +44,7 @@ const FEATURE_TOP = 420;
         </div>
 
         @if (view() === 'canvas') {
-          <div class="flex-1 relative bg-slate-50">
+          <div class="flex-1 relative bg-slate-50" (click)="clearSelection()">
             <f-flow fDraggable class="block w-full h-full" (fFullRendered)="onFullRendered()">
               <f-canvas fZoom #canvas>
 
@@ -75,7 +75,13 @@ const FEATURE_TOP = 420;
                     [fInputId]="'in-epic-' + e.id"
                     fInputConnectableSide="top"
                     [fNodePosition]="{ x: i * colWidth + 40 + 24, y: epicY }"
-                    class="w-56 rounded-full border-2 border-slate-300 bg-white shadow-sm text-center"
+                    (click)="selectEpic(e.id); $event.stopPropagation()"
+                    class="w-56 rounded-full border-2 bg-white shadow-sm text-center cursor-pointer transition-all"
+                    [class.border-slate-300]="!isSelectedEpic(e.id)"
+                    [class.border-ink]="isSelectedEpic(e.id)"
+                    [class.ring-2]="isSelectedEpic(e.id)"
+                    [class.ring-ink]="isSelectedEpic(e.id)"
+                    [class.opacity-30]="dimEpic(e.id)"
                   >
                     <div class="px-4 py-3">
                       <div class="font-medium text-sm truncate">{{ e.name }}</div>
@@ -99,7 +105,8 @@ const FEATURE_TOP = 420;
                     fInputConnectableSide="top"
                     [fNodePosition]="{ x: f.canvasX, y: f.canvasY }"
                     (fNodePositionChange)="onMove(f.id, $event)"
-                    class="w-64 rounded-lg border border-line bg-white shadow-sm"
+                    class="w-64 rounded-lg border border-line bg-white shadow-sm transition-all"
+                    [class.opacity-25]="dimFeature(f.epicId)"
                   >
                     <div class="px-3 pt-2 pb-1 flex items-center justify-between">
                       <span class="text-[10px] uppercase tracking-wide text-slate-400 truncate max-w-[140px]">
@@ -136,7 +143,8 @@ const FEATURE_TOP = 420;
                     [fOffset]="24"
                     [fOutputId]="c.from"
                     [fInputId]="c.to"
-                    fInputSide="calculate">
+                    fInputSide="calculate"
+                    [class.shipline-conn-dim]="dimConnection(c.epicId)">
                     <f-connection-marker-arrow></f-connection-marker-arrow>
                   </f-connection>
                 }
@@ -212,6 +220,28 @@ export class ProjectPage {
   ready = signal(false);
   view = signal<'canvas' | 'dashboard'>('canvas');
   dashboard = signal<any | null>(null);
+  selectedEpicId = signal<string | null>(null);
+
+  selectEpic(epicId: string) {
+    this.selectedEpicId.update(cur => cur === epicId ? null : epicId);
+  }
+  clearSelection() { this.selectedEpicId.set(null); }
+
+  dimEpic(epicId: string) {
+    const sel = this.selectedEpicId();
+    return sel !== null && sel !== epicId;
+  }
+  dimFeature(epicId: string | null) {
+    const sel = this.selectedEpicId();
+    return sel !== null && epicId !== sel;
+  }
+  dimConnection(connEpicId: string | null) {
+    const sel = this.selectedEpicId();
+    return sel !== null && connEpicId !== sel;
+  }
+  isSelectedEpic(epicId: string) {
+    return this.selectedEpicId() === epicId;
+  }
 
   canvas = viewChild<FCanvasComponent>('canvas');
   statusKeys = STATUS_ORDER;
@@ -245,22 +275,25 @@ export class ProjectPage {
   });
 
   allConnections = computed(() => {
-    const out: { id: string; from: string; to: string }[] = [];
+    const out: { id: string; from: string; to: string; epicId: string | null }[] = [];
     const p = this.project();
     const feats = this.features();
     if (!p) return out;
 
     for (const e of p.epics) {
-      out.push({ id: 'pe-' + e.id, from: 'out-project-root', to: 'in-epic-' + e.id });
+      out.push({ id: 'pe-' + e.id, from: 'out-project-root', to: 'in-epic-' + e.id, epicId: e.id });
     }
     const firstByEpic = this.firstFeatureOfEpic();
     for (const e of p.epics) {
       const fid = firstByEpic[e.id];
-      if (fid) out.push({ id: 'ef-' + e.id, from: 'out-epic-' + e.id, to: 'in-' + fid });
+      if (fid) out.push({ id: 'ef-' + e.id, from: 'out-epic-' + e.id, to: 'in-' + fid, epicId: e.id });
     }
+    const featureById = new Map(feats.map(f => [f.id, f]));
     for (const f of feats) {
       for (const dep of f.outgoingDeps) {
-        out.push({ id: 'ff-' + dep.id, from: 'out-' + f.id, to: 'in-' + dep.toFeatureId });
+        const target = featureById.get(dep.toFeatureId);
+        const epicId = f.epicId && target && target.epicId === f.epicId ? f.epicId : null;
+        out.push({ id: 'ff-' + dep.id, from: 'out-' + f.id, to: 'in-' + dep.toFeatureId, epicId });
       }
     }
     return out;
