@@ -1,12 +1,21 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Api, Feature, FeatureUpdate } from './api.service';
+import { Api, Feature, FeatureUpdate, Track, TrackStatus } from './api.service';
 
 const PRIORITY = ['P0','P1','P2','P3'] as const;
 const EFFORT  = ['XS','S','M','L','XL'] as const;
 const PROTO   = ['NOT_DONE','MOCK','DONE'] as const;
 const BACKEND = ['NO','YES','PARTIAL','HYBRID'] as const;
+const TRACK_STATUSES: TrackStatus[] = ['NOT_STARTED','IN_PROGRESS','BLOCKED','DONE','NA'];
+
+const STATUS_COLOR: Record<TrackStatus, string> = {
+  NOT_STARTED: '#cbd5e1',
+  IN_PROGRESS: '#60a5fa',
+  BLOCKED:     '#f87171',
+  DONE:        '#34d399',
+  NA:          '#e2e8f0',
+};
 
 @Component({
   selector: 'app-feature-detail-panel',
@@ -41,6 +50,32 @@ const BACKEND = ['NO','YES','PARTIAL','HYBRID'] as const;
         <!-- Body -->
         <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
+          <!-- Track statuses (Dev / QA / UI-UX / Prototype / Backend) -->
+          @if (tracks().length > 0) {
+            <section class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+              <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-3">Track status</div>
+              <div class="space-y-2">
+                @for (t of tracks(); track t.id) {
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
+                            [style.background]="statusColor(statusFor(t.id))"></span>
+                      <span class="text-sm text-slate-700 truncate">{{ t.name }}</span>
+                    </div>
+                    <select
+                      [ngModel]="statusFor(t.id)"
+                      (ngModelChange)="setStatus(t.id, $event)"
+                      class="text-xs border border-slate-200 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-ink/20">
+                      @for (s of trackStatuses; track s) {
+                        <option [value]="s">{{ prettyStatus(s) }}</option>
+                      }
+                    </select>
+                  </div>
+                }
+              </div>
+            </section>
+          }
+
           <!-- Top metadata row -->
           <div class="grid grid-cols-2 gap-3">
             <label class="block">
@@ -59,7 +94,7 @@ const BACKEND = ['NO','YES','PARTIAL','HYBRID'] as const;
               </select>
             </label>
             <label class="block">
-              <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Prototype</div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Prototype state</div>
               <select [(ngModel)]="draft.prototypeState" (ngModelChange)="dirty.set(true)"
                       class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-ink/20">
                 @for (p of protos; track p) { <option [value]="p">{{ p.replace('_', ' ').toLowerCase() }}</option> }
@@ -185,7 +220,9 @@ const BACKEND = ['NO','YES','PARTIAL','HYBRID'] as const;
 })
 export class FeatureDetailPanel {
   feature = input<Feature | null>(null);
+  tracks = input<Track[]>([]);
   saved = output<Feature>();
+  trackChanged = output<{ featureId: string; trackId: string; status: TrackStatus }>();
   close = output<void>();
 
   private api = inject(Api);
@@ -194,10 +231,26 @@ export class FeatureDetailPanel {
   efforts    = EFFORT;
   protos     = PROTO;
   backends   = BACKEND;
+  trackStatuses = TRACK_STATUSES;
 
   draft: FeatureUpdate = {};
   dirty = signal(false);
   saving = signal(false);
+
+  statusFor(trackId: string): TrackStatus {
+    const f = this.feature();
+    return f?.trackStatuses.find(s => s.trackId === trackId)?.status ?? 'NOT_STARTED';
+  }
+  statusColor(s: TrackStatus) { return STATUS_COLOR[s]; }
+  prettyStatus(s: TrackStatus) { return s.replace('_', ' ').toLowerCase(); }
+
+  setStatus(trackId: string, status: TrackStatus) {
+    const f = this.feature();
+    if (!f) return;
+    this.api.setTrackStatus(f.id, trackId, status).subscribe(() => {
+      this.trackChanged.emit({ featureId: f.id, trackId, status });
+    });
+  }
 
   constructor() {
     effect(() => {

@@ -232,7 +232,9 @@ const FEATURE_TOP = 420;
       </section>
       <app-feature-detail-panel
         [feature]="selectedFeature()"
+        [tracks]="p.tracks"
         (saved)="onFeatureSaved($event)"
+        (trackChanged)="onTrackChanged($event)"
         (close)="closeFeature()" />
     } @else if (loadError()) {
       <div class="max-w-xl mx-auto mt-20 p-6 rounded-2xl border border-red-200 bg-red-50">
@@ -291,6 +293,16 @@ export class ProjectPage {
   }
   onFeatureSaved(updated: Feature) {
     this.features.update(list => list.map(x => x.id === updated.id ? { ...x, ...updated } : x));
+  }
+  onTrackChanged(ev: { featureId: string; trackId: string; status: TrackStatus }) {
+    this.features.update(list => list.map(x => {
+      if (x.id !== ev.featureId) return x;
+      const has = x.trackStatuses.some(s => s.trackId === ev.trackId);
+      const updated = has
+        ? x.trackStatuses.map(s => s.trackId === ev.trackId ? { ...s, status: ev.status } : s)
+        : [...x.trackStatuses, { trackId: ev.trackId, status: ev.status }];
+      return { ...x, trackStatuses: updated };
+    }));
   }
 
   dimEpic(epicId: string) {
