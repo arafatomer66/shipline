@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shipline-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shipline
+      POSTGRES_PASSWORD: shipline
+      POSTGRES_DB: shipline
+    ports:
+      - "5438:5432"
+    volumes:
+      - shipline_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shipline -d shipline"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  shipline_pg_data:

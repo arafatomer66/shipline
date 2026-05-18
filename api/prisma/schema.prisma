@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Priority {
+  P0
+  P1
+  P2
+  P3
+}
+
+enum Effort {
+  XS
+  S
+  M
+  L
+  XL
+}
+
+enum BackendNeeded {
+  NO
+  YES
+  PARTIAL
+  HYBRID
+}
+
+enum PrototypeState {
+  NOT_DONE
+  MOCK
+  DONE
+}
+
+enum TrackStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  NA
+}
+
+enum DependencyType {
+  DEPENDS_ON
+  ROLLS_UP_TO
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  epics        Epic[]
+  features     Feature[]
+  tracks       Track[]
+  dependencies Dependency[]
+}
+
+model Track {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  color     String   @default("#6366f1")
+  order     Int      @default(0)
+  required  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  project  Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  statuses FeatureTrackStatus[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model Epic {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  color     String   @default("#94a3b8")
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  features Feature[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model Feature {
+  id                 String          @id @default(cuid())
+  projectId          String
+  epicId             String?
+  externalId         String?
+  subArea            String?
+  title              String
+  description        String?
+  userRole           String?
+  trigger            String?
+  screenFile         String?
+  uiElementType      String?
+  prototypeState     PrototypeState  @default(NOT_DONE)
+  backendNeeded      BackendNeeded   @default(NO)
+  apiEndpointHint    String?
+  priority           Priority        @default(P1)
+  estimatedEffort    Effort?
+  sprintTarget       String?
+  owner              String?
+  acceptanceCriteria String?
+  notes              String?
+  canvasX            Float           @default(0)
+  canvasY            Float           @default(0)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  project          Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  epic             Epic?                @relation(fields: [epicId], references: [id], onDelete: SetNull)
+  trackStatuses    FeatureTrackStatus[]
+  outgoingDeps     Dependency[]         @relation("FromFeature")
+  incomingDeps     Dependency[]         @relation("ToFeature")
+
+  @@index([projectId])
+  @@index([epicId])
+  @@index([priority])
+}
+
+model FeatureTrackStatus {
+  featureId String
+  trackId   String
+  status    TrackStatus @default(NOT_STARTED)
+  updatedAt DateTime    @updatedAt
+
+  feature Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  track   Track   @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@id([featureId, trackId])
+  @@index([trackId, status])
+}
+
+model Dependency {
+  id            String         @id @default(cuid())
+  projectId     String
+  fromFeatureId String
+  toFeatureId   String
+  type          DependencyType @default(DEPENDS_ON)
+  label         String?
+  createdAt     DateTime       @default(now())
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fromFeature Feature @relation("FromFeature", fields: [fromFeatureId], references: [id], onDelete: Cascade)
+  toFeature   Feature @relation("ToFeature", fields: [toFeatureId], references: [id], onDelete: Cascade)
+
+  @@unique([fromFeatureId, toFeatureId, type])
+  @@index([projectId])
+}
