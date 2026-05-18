@@ -48,66 +48,60 @@ const FEATURE_TOP = 420;
             <f-flow fDraggable class="block w-full h-full" (fFullRendered)="onFullRendered()">
               <f-canvas fZoom #canvas>
 
-                <!-- PROJECT ROOT NODE -->
+                <!-- PROJECT ROOT NODE (output as child block) -->
                 <div
                   fNode fDragHandle
                   fNodeId="project-root"
                   [fNodePosition]="rootPos()"
-                  class="relative w-56 rounded-2xl border-2 border-ink bg-white shadow-md px-4 py-3 text-center"
+                  class="w-56 rounded-2xl border-2 border-ink bg-white shadow-md text-center"
                 >
-                  <div class="text-[10px] uppercase tracking-wider text-slate-400">Project</div>
-                  <div class="font-semibold text-base mt-0.5 truncate">{{ p.name }}</div>
+                  <div class="px-4 py-3">
+                    <div class="text-[10px] uppercase tracking-wider text-slate-400">Project</div>
+                    <div class="font-semibold text-base mt-0.5 truncate">{{ p.name }}</div>
+                  </div>
                   <div
                     fNodeOutput
                     fOutputId="out-project-root"
                     fOutputConnectableSide="bottom"
-                    class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-ink border-2 border-white"></div>
+                    class="mx-auto -mb-1.5 w-3 h-3 rounded-full bg-ink border-2 border-white"></div>
                 </div>
 
-                <!-- EPIC NODES -->
+                <!-- EPIC NODES: fNodeInput on host, fNodeOutput on child block -->
                 @for (e of p.epics; track e.id; let i = $index) {
                   <div
                     fNode fDragHandle
+                    fNodeInput
                     [fNodeId]="'epic-' + e.id"
+                    [fInputId]="'in-epic-' + e.id"
+                    fInputConnectableSide="top"
                     [fNodePosition]="{ x: i * colWidth + 40 + 24, y: epicY }"
-                    class="relative w-56 rounded-full border-2 border-slate-300 bg-white shadow-sm px-4 py-3 text-center"
+                    class="w-56 rounded-full border-2 border-slate-300 bg-white shadow-sm text-center"
                   >
-                    <div
-                      fNodeInput
-                      [fInputId]="'in-epic-' + e.id"
-                      fInputConnectableSide="top"
-                      class="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400 border-2 border-white"></div>
-                    <div class="font-medium text-sm truncate">{{ e.name }}</div>
-                    <div class="text-[10px] text-slate-400 mt-0.5">{{ featuresPerEpic()[e.id] || 0 }} features</div>
+                    <div class="px-4 py-3">
+                      <div class="font-medium text-sm truncate">{{ e.name }}</div>
+                      <div class="text-[10px] text-slate-400 mt-0.5">{{ featuresPerEpic()[e.id] || 0 }} features</div>
+                    </div>
                     <div
                       fNodeOutput
                       [fOutputId]="'out-epic-' + e.id"
                       fOutputConnectableSide="bottom"
-                      class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400 border-2 border-white"></div>
+                      class="mx-auto -mb-1.5 w-3 h-3 rounded-full bg-slate-400 border-2 border-white"></div>
                   </div>
                 }
 
-                <!-- FEATURE NODES -->
+                <!-- FEATURE NODES: fNodeInput on host, fNodeOutput on child block -->
                 @for (f of features(); track f.id) {
                   <div
                     fNode fDragHandle
+                    fNodeInput
                     [fNodeId]="f.id"
+                    [fInputId]="'in-' + f.id"
+                    fInputConnectableSide="top"
                     [fNodePosition]="{ x: f.canvasX, y: f.canvasY }"
                     (fNodePositionChange)="onMove(f.id, $event)"
-                    class="relative w-64 rounded-lg border border-line bg-white shadow-sm overflow-visible"
+                    class="w-64 rounded-lg border border-line bg-white shadow-sm"
                   >
-                    <div
-                      fNodeInput
-                      [fInputId]="'in-' + f.id"
-                      fInputConnectableSide="top"
-                      class="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white"></div>
-                    <div
-                      fNodeOutput
-                      [fOutputId]="'out-' + f.id"
-                      fOutputConnectableSide="bottom"
-                      class="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-300 border-2 border-white"></div>
-
-                    <div class="px-3 pt-2 pb-1 flex items-center justify-between rounded-t-lg overflow-hidden">
+                    <div class="px-3 pt-2 pb-1 flex items-center justify-between">
                       <span class="text-[10px] uppercase tracking-wide text-slate-400 truncate max-w-[140px]">
                         {{ f.epic?.name }}@if (f.externalId) { · {{ f.externalId }} }
                       </span>
@@ -117,7 +111,7 @@ const FEATURE_TOP = 420;
                       </span>
                     </div>
                     <div class="px-3 pb-2 text-sm font-medium leading-snug">{{ f.title }}</div>
-                    <div class="flex h-1.5 rounded-b-lg overflow-hidden">
+                    <div class="flex h-1.5">
                       @for (t of p.tracks; track t.id) {
                         <button
                           class="flex-1 border-r border-white last:border-r-0"
@@ -126,47 +120,25 @@ const FEATURE_TOP = 420;
                           (click)="cycle(f, t); $event.stopPropagation()"></button>
                       }
                     </div>
+                    <div
+                      fNodeOutput
+                      [fOutputId]="'out-' + f.id"
+                      fOutputConnectableSide="bottom"
+                      class="mx-auto -mb-1.5 w-3 h-3 rounded-full bg-slate-300 border-2 border-white"></div>
                   </div>
                 }
 
-                <!-- PROJECT → EPIC edges -->
-                @for (e of p.epics; track e.id) {
+                <!-- ALL edges (segment routing, like Foblex's own examples) -->
+                @for (c of allConnections(); track c.id) {
                   <f-connection
-                    fOutputId="out-project-root"
-                    [fInputId]="'in-epic-' + e.id"
-                    fType="bezier"
-                    fOutputSide="bottom"
-                    fInputSide="top">
+                    fBehavior="fixed"
+                    fType="segment"
+                    [fOffset]="24"
+                    [fOutputId]="c.from"
+                    [fInputId]="c.to"
+                    fInputSide="calculate">
                     <f-connection-marker-arrow></f-connection-marker-arrow>
                   </f-connection>
-                }
-
-                <!-- EPIC → first FEATURE edges -->
-                @for (e of p.epics; track e.id) {
-                  @if (firstFeatureOfEpic()[e.id]; as firstFid) {
-                    <f-connection
-                      [fOutputId]="'out-epic-' + e.id"
-                      [fInputId]="'in-' + firstFid"
-                      fType="bezier"
-                      fOutputSide="bottom"
-                      fInputSide="top">
-                      <f-connection-marker-arrow></f-connection-marker-arrow>
-                    </f-connection>
-                  }
-                }
-
-                <!-- FEATURE → FEATURE edges (from DB) -->
-                @for (f of features(); track f.id) {
-                  @for (dep of f.outgoingDeps; track dep.id) {
-                    <f-connection
-                      [fOutputId]="'out-' + f.id"
-                      [fInputId]="'in-' + dep.toFeatureId"
-                      fType="bezier"
-                      fOutputSide="bottom"
-                      fInputSide="top">
-                      <f-connection-marker-arrow></f-connection-marker-arrow>
-                    </f-connection>
-                  }
                 }
 
               </f-canvas>
@@ -272,6 +244,28 @@ export class ProjectPage {
     return map;
   });
 
+  allConnections = computed(() => {
+    const out: { id: string; from: string; to: string }[] = [];
+    const p = this.project();
+    const feats = this.features();
+    if (!p) return out;
+
+    for (const e of p.epics) {
+      out.push({ id: 'pe-' + e.id, from: 'out-project-root', to: 'in-epic-' + e.id });
+    }
+    const firstByEpic = this.firstFeatureOfEpic();
+    for (const e of p.epics) {
+      const fid = firstByEpic[e.id];
+      if (fid) out.push({ id: 'ef-' + e.id, from: 'out-epic-' + e.id, to: 'in-' + fid });
+    }
+    for (const f of feats) {
+      for (const dep of f.outgoingDeps) {
+        out.push({ id: 'ff-' + dep.id, from: 'out-' + f.id, to: 'in-' + dep.toFeatureId });
+      }
+    }
+    return out;
+  });
+
   constructor() {
     queueMicrotask(() => this.load());
   }
@@ -331,6 +325,14 @@ export class ProjectPage {
   }
 
   onFullRendered() {
+    const c = this.canvas();
+    if (c) {
+      try { (c as any).redraw?.(); } catch {}
+    }
+    const out = document.querySelectorAll('.f-node-output').length;
+    const inp = document.querySelectorAll('.f-node-input').length;
+    const con = document.querySelectorAll('f-connection').length;
+    console.log(`[Shipline] fFullRendered — outputs: ${out}, inputs: ${inp}, connections: ${con}, expected connections: ${this.allConnections().length}`);
     requestAnimationFrame(() => this.fit());
   }
 
