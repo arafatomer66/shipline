@@ -60,12 +60,18 @@ web/
     api.service.ts                  single HttpClient over /api
     toast.service.ts                signal-based toast queue
     toast.component.ts              renders toasts bottom-right
-    feature-detail-panel.component.ts   slide-in editor (all 22 fields + 5 statuses)
+    feature-detail-panel.component.ts   slide-in editor (all fields + 5 statuses + linked resources)
     pages/
       projects-list.page.ts         homepage / hero / import / create
-      project.page.ts               <f-flow> canvas + dashboard + palette
-  src/styles.css                    Tailwind + Foblex CSS overrides
+      project.page.ts               <f-flow> canvas + dashboard + palette + at-risk toggle
+  src/styles.css                    Tailwind + Foblex CSS overrides + .shipline-{feature,epic,root} rules
   src/index.html                    <base href="/"> — do not remove
+
+deploy/
+  deploy-ec2.sh                     One-shot deploy to a fresh AL2023 EC2 instance.
+                                    Postgres in Docker, NestJS via systemd, nginx
+                                    reverse-proxy with Basic Auth + self-signed TLS.
+  README.md                         Deploy doc + password-rotation steps.
 
 docker-compose.yml                  Postgres 16 on 5438
 ```
@@ -88,6 +94,10 @@ docker-compose.yml                  Postgres 16 on 5438
 - Tailwind's preflight wipes Foblex's `:root --ff-*` CSS variables. `web/src/styles.css` re-declares `--ff-connection-color`, `--ff-connection-width`, and minimap variables. If connections go invisible again, that file is the first thing to check.
 - `<f-canvas>` exposes `fitToScreen`, `centerGroupOrNode(id, animated)`, `getScale`, `setScale(scale, toPosition)`, `resetScaleAndCenter`. Wrap calls in try/catch since the canvas can be undefined during fast HMR cycles.
 - Listen to `(fCreateConnection)` on `<f-flow>` to handle drag-to-connect. The event exposes `sourceId` and `targetId` (and legacy `fOutputId`/`fInputId`). Always extract feature IDs from your own ID prefix scheme (`out-<id>` / `in-<id>`) before persisting.
+- **Foblex 18.6's `default.scss` (loaded via `angular.json`) silently overrides every `.f-node`.** It sets `width: 120px` + `text-align: center` + padding + border + background with selector specificity `f-flow .f-node` (0,1,1) that beats any plain Tailwind class. **Solution**: each card type carries a marker class (`.shipline-feature`, `.shipline-epic`, `.shipline-root`) and `web/src/styles.css` has `f-flow .f-node.shipline-feature { ... }` rules (0,2,1) that own width/border/bg AND every interactive state (hover, selected, at-risk, epic-selected). Don't try to drive card visuals from Tailwind classes on the template — they'll lose.
+- **`fOutputConnectableSide="bottom"` does NOT auto-add a `.bottom` CSS class** to the handle element. Foblex's `_socket-frame` only sets `position: absolute`. If you center with `mx-auto`, it does nothing (auto-margin needs block flow) and the handle stays at left:0. **Always use `absolute left-1/2 -translate-x-1/2 -bottom-2`** for outputs and `absolute left-1/2 -translate-x-1/2 -top-1.5` for inputs.
+- **Connector colors default to an accent-blue** when connected. Override `--ff-connector-{size,background-color,connected-color,accent-color}` in `:root` of `styles.css` to keep handles as small slate dots.
+- **Auto fit-to-screen zooms out too far for large projects.** With ~30 epics × ~320 px col-width, fit drops the canvas to 0.15× and cards become illegible. `onFullRendered` does `fit()` then clamps zoom to a `minZoom` (currently 0.7 for >8 epics) and re-centers on `project-root`.
 
 ## Excel import / export
 
@@ -116,3 +126,9 @@ docker-compose.yml                  Postgres 16 on 5438
 - Mobile UI (canvas is desktop-first)
 - Real-time collaboration / websockets
 - Drag-to-reassign existing connection endpoints (only create + delete are wired)
+
+## Deployment
+
+There is a live single-instance deployment. Details in `NEXT_SESSION.md` and `deploy/README.md` (URL, credentials location, instance ID, region, SG, key pair path). Use `deploy/deploy-ec2.sh` to reproduce the deploy — it requires `ADMIN_PASSWORD` env var (never baked into the repo).
+
+The live URL serves the same Angular app + NestJS API. Real production hardening (multi-user auth, RDS, ALB, real TLS cert, secrets manager, autoscaling) is **out of scope** until the app needs more than one user.
