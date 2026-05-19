@@ -34,6 +34,10 @@ class UpdateFeatureDto {
   @IsOptional() @IsString() notes?: string | null;
   @IsOptional() @IsString() owner?: string | null;
   @IsOptional() @IsString() sprintTarget?: string | null;
+  @IsOptional() @IsString() figmaUrl?: string | null;
+  @IsOptional() @IsString() prUrl?: string | null;
+  @IsOptional() @IsString() ticketUrl?: string | null;
+  @IsOptional() @IsString() docUrl?: string | null;
   @IsOptional() @IsEnum(['P0','P1','P2','P3']) priority?: Priority;
   @IsOptional() @IsEnum(['XS','S','M','L','XL']) estimatedEffort?: Effort | null;
   @IsOptional() @IsEnum(['NOT_DONE','MOCK','DONE']) prototypeState?: PrototypeState;

@@ -41,6 +41,10 @@ export interface Feature {
   estimatedEffort: Effort | null;
   sprintTarget: string | null;
   owner: string | null;
+  figmaUrl: string | null;
+  prUrl: string | null;
+  ticketUrl: string | null;
+  docUrl: string | null;
   canvasX: number; canvasY: number;
   epic: Epic | null;
   trackStatuses: FeatureTrackStatus[];
@@ -50,7 +54,8 @@ export interface Feature {
 export type FeatureUpdate = Partial<Pick<Feature,
   'title'|'description'|'externalId'|'subArea'|'userRole'|'trigger'|'screenFile'|
   'uiElementType'|'apiEndpointHint'|'acceptanceCriteria'|'notes'|'owner'|
-  'sprintTarget'|'priority'|'estimatedEffort'|'prototypeState'|'backendNeeded'
+  'sprintTarget'|'priority'|'estimatedEffort'|'prototypeState'|'backendNeeded'|
+  'figmaUrl'|'prUrl'|'ticketUrl'|'docUrl'
 >>;
 export interface ProjectSummary {
   id: string; name: string; slug: string;

@@ -189,6 +189,37 @@ const STATUS_COLOR: Record<TrackStatus, string> = {
                       class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20"></textarea>
           </label>
 
+          <!-- Linked resources -->
+          <div class="pt-1">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-2">Linked resources</div>
+            <div class="space-y-2">
+              <label class="flex items-center gap-2">
+                <span class="w-12 text-[11px] text-slate-500 font-medium">Figma</span>
+                <input [(ngModel)]="draft.figmaUrl" (ngModelChange)="dirty.set(true)"
+                       placeholder="https://figma.com/…"
+                       class="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20" />
+              </label>
+              <label class="flex items-center gap-2">
+                <span class="w-12 text-[11px] text-slate-500 font-medium">PR</span>
+                <input [(ngModel)]="draft.prUrl" (ngModelChange)="dirty.set(true)"
+                       placeholder="https://github.com/…/pull/…"
+                       class="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20" />
+              </label>
+              <label class="flex items-center gap-2">
+                <span class="w-12 text-[11px] text-slate-500 font-medium">Ticket</span>
+                <input [(ngModel)]="draft.ticketUrl" (ngModelChange)="dirty.set(true)"
+                       placeholder="https://linear.app/… or https://…/jira/…"
+                       class="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20" />
+              </label>
+              <label class="flex items-center gap-2">
+                <span class="w-12 text-[11px] text-slate-500 font-medium">Doc</span>
+                <input [(ngModel)]="draft.docUrl" (ngModelChange)="dirty.set(true)"
+                       placeholder="https://docs.google.com/… or https://notion.so/…"
+                       class="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20" />
+              </label>
+            </div>
+          </div>
+
           <!-- External ID at the bottom (rarely edited) -->
           <label class="block">
             <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">External ID</div>
@@ -289,6 +320,10 @@ export class FeatureDetailPanel {
           estimatedEffort: f.estimatedEffort,
           prototypeState: f.prototypeState,
           backendNeeded: f.backendNeeded,
+          figmaUrl: f.figmaUrl,
+          prUrl: f.prUrl,
+          ticketUrl: f.ticketUrl,
+          docUrl: f.docUrl,
         };
         this.dirty.set(false);
         this.saving.set(false);

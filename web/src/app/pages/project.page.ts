@@ -47,6 +47,27 @@ const FEATURE_TOP = 420;
             </div>
           </div>
           <div class="flex items-center gap-3">
+            <button
+              class="px-3 py-1.5 rounded-lg border text-sm flex items-center gap-1.5 transition font-medium"
+              [class.border-red-200]="atRiskMode()"
+              [class.bg-red-50]="atRiskMode()"
+              [class.text-red-700]="atRiskMode()"
+              [class.border-slate-200]="!atRiskMode()"
+              [class.hover:bg-slate-50]="!atRiskMode()"
+              [class.text-slate-600]="!atRiskMode()"
+              [title]="atRiskMode() ? 'Showing only at-risk features' : 'Spotlight at-risk features'"
+              (click)="toggleAtRisk(); $event.stopPropagation()">
+              <span class="inline-block w-1.5 h-1.5 rounded-full"
+                    [style.background]="atRiskMode() || atRiskCount() > 0 ? '#dc2626' : '#94a3b8'"></span>
+              At-risk
+              @if (atRiskCount() > 0) {
+                <span class="text-[10px] font-bold tabular-nums px-1.5 py-px rounded-full"
+                      [class.bg-red-100]="!atRiskMode()"
+                      [class.text-red-700]="!atRiskMode()"
+                      [class.bg-red-200]="atRiskMode()"
+                      [class.text-red-800]="atRiskMode()">{{ atRiskCount() }}</span>
+              }
+            </button>
             <div class="relative">
               <button
                 class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm flex items-center gap-1.5 hover:bg-slate-50"
@@ -170,17 +191,26 @@ const FEATURE_TOP = 420;
                   fNode fDragHandle
                   fNodeId="project-root"
                   [fNodePosition]="rootPos()"
-                  class="w-56 rounded-2xl border-2 border-ink bg-white shadow-md text-center"
+                  class="shipline-root text-center"
                 >
                   <div class="px-4 py-3">
-                    <div class="text-[10px] uppercase tracking-wider text-slate-400">Project</div>
+                    <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Project</div>
                     <div class="font-semibold text-base mt-0.5 truncate">{{ p.name }}</div>
+                    <div class="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
+                      <span class="font-bold text-ink tabular-nums">{{ projectRollup().pct }}%</span>
+                      <span>complete</span>
+                      <span class="text-slate-300">·</span>
+                      <span>{{ features().length }} features</span>
+                    </div>
+                    <div class="mt-2 h-1 rounded-full bg-slate-100 overflow-hidden">
+                      <div class="h-full bg-emerald-400 transition-all" [style.width.%]="projectRollup().pct"></div>
+                    </div>
                   </div>
                   <div
                     fNodeOutput
                     fOutputId="out-project-root"
                     fOutputConnectableSide="bottom"
-                    class="shipline-handle shipline-handle-out mx-auto -mb-2.5 w-5 h-5 rounded-full bg-ink border-2 border-white cursor-crosshair"></div>
+                    class="shipline-handle shipline-handle-out absolute left-1/2 -translate-x-1/2 -bottom-2.5 w-5 h-5 rounded-full bg-ink border-2 border-white cursor-crosshair"></div>
                 </div>
 
                 <!-- EPIC NODES: fNodeInput on host, fNodeOutput on child block -->
@@ -193,22 +223,29 @@ const FEATURE_TOP = 420;
                     fInputConnectableSide="top"
                     [fNodePosition]="{ x: i * colWidth + 40 + 24, y: epicY }"
                     (click)="selectEpic(e.id); $event.stopPropagation()"
-                    class="w-56 rounded-full border-2 bg-white shadow-sm text-center cursor-pointer transition-all"
-                    [class.border-slate-300]="!isSelectedEpic(e.id)"
-                    [class.border-ink]="isSelectedEpic(e.id)"
-                    [class.ring-2]="isSelectedEpic(e.id)"
-                    [class.ring-ink]="isSelectedEpic(e.id)"
-                    [class.opacity-30]="dimEpic(e.id)"
+                    class="shipline-epic cursor-pointer transition-all hover:shadow-md"
+                    [class.shipline-epic-selected]="isSelectedEpic(e.id)"
+                    [class.opacity-30]="shouldDimEpic(e.id)"
                   >
-                    <div class="px-4 py-3">
-                      <div class="font-medium text-sm truncate">{{ e.name }}</div>
-                      <div class="text-[10px] text-slate-400 mt-0.5">{{ featuresPerEpic()[e.id] || 0 }} features</div>
+                    <div class="px-4 py-2.5 flex items-center justify-center gap-2">
+                      <span class="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                            [style.background]="epicDotColor(e.id)"></span>
+                      <div class="min-w-0">
+                        <div class="font-semibold text-sm truncate leading-tight">{{ e.name }}</div>
+                        <div class="text-[10px] mt-0.5 flex items-center justify-center gap-1 tabular-nums"
+                             [class.text-slate-400]="!isSelectedEpic(e.id)"
+                             [class.text-slate-300]="isSelectedEpic(e.id)">
+                          <span>{{ featuresPerEpic()[e.id] || 0 }} features</span>
+                          <span class="opacity-50">·</span>
+                          <span class="font-semibold">{{ epicPct(e.id) }}%</span>
+                        </div>
+                      </div>
                     </div>
                     <div
                       fNodeOutput
                       [fOutputId]="'out-epic-' + e.id"
                       fOutputConnectableSide="bottom"
-                      class="shipline-handle shipline-handle-out mx-auto -mb-2 w-4 h-4 rounded-full bg-slate-400 border-2 border-white cursor-crosshair hover:bg-ink hover:scale-125 transition"></div>
+                      class="shipline-handle shipline-handle-out absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 rounded-full bg-slate-400 border-2 border-white cursor-crosshair hover:bg-ink hover:scale-125 transition"></div>
                   </div>
                 }
 
@@ -219,44 +256,96 @@ const FEATURE_TOP = 420;
                     [fNodeId]="f.id"
                     [fNodePosition]="{ x: f.canvasX, y: f.canvasY }"
                     (fNodePositionChange)="onMove(f.id, $event)"
-                    class="relative w-64 rounded-lg border border-line bg-white shadow-sm transition-all cursor-pointer hover:border-slate-400 hover:shadow-md"
-                    [class.opacity-25]="dimFeature(f.epicId)"
-                    [class.!border-ink]="selectedFeatureId() === f.id"
-                    [class.ring-2]="selectedFeatureId() === f.id"
-                    [class.ring-ink]="selectedFeatureId() === f.id"
+                    class="shipline-feature relative"
+                    [class.opacity-25]="shouldDimFeature(f, p.tracks)"
+                    [class.shipline-at-risk]="atRiskMode() && isAtRisk(f, p.tracks)"
+                    [class.shipline-selected]="selectedFeatureId() === f.id"
                     (click)="openFeature(f, $event)"
                   >
+                    <!-- Input handle (top center) -->
                     <div
                       fNodeInput
                       [fInputId]="'in-' + f.id"
                       fInputConnectableSide="top"
                       (click)="$event.stopPropagation()"
                       class="shipline-handle absolute left-1/2 -translate-x-1/2 -top-1.5 w-3 h-3 rounded-full bg-slate-300 border-2 border-white"></div>
-                    <div class="px-3 pt-2 pb-1 flex items-center justify-between">
-                      <span class="text-[10px] uppercase tracking-wide text-slate-400 truncate max-w-[140px]">
-                        {{ f.epic?.name }}@if (f.externalId) { · {{ f.externalId }} }
-                      </span>
-                      <span class="text-[10px] px-1.5 py-0.5 rounded text-white"
-                            [style.background]="priorityBg(f.priority)">
-                        {{ f.priority }}
-                      </span>
-                    </div>
-                    <div class="px-3 pb-2 text-sm font-medium leading-snug">{{ f.title }}</div>
-                    <div class="flex h-1.5">
-                      @for (t of p.tracks; track t.id) {
-                        <button
-                          class="flex-1 border-r border-white last:border-r-0"
-                          [style.background]="statusColor(f, t.id)"
-                          [title]="t.name + ': ' + statusOf(f, t.id)"
-                          (click)="cycle(f, t); $event.stopPropagation()"></button>
+
+                    <!-- Header: epic on the left, priority on the right -->
+                    <div class="flex items-center gap-2 px-4 pt-3 pb-1.5">
+                      <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                        <span class="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+                              [style.background]="accentColor(f, p.tracks)"></span>
+                        <span class="text-[10.5px] uppercase tracking-[0.06em] text-slate-500 font-semibold truncate">
+                          {{ f.epic?.name || 'Unassigned' }}@if (f.externalId) { <span class="text-slate-300 normal-case tracking-normal">· {{ f.externalId }}</span> }
+                        </span>
+                      </div>
+                      @if (f.priority) {
+                        <span class="text-[10px] px-1.5 py-0.5 rounded font-bold tracking-wider flex-shrink-0"
+                              [style.background]="priorityStyle(f.priority).bg"
+                              [style.color]="priorityStyle(f.priority).fg">
+                          {{ f.priority }}
+                        </span>
                       }
                     </div>
+
+                    <!-- Linked resources (only when any link is present) -->
+                    @if (f.figmaUrl || f.prUrl || f.ticketUrl || f.docUrl) {
+                      <div class="px-4 pb-1.5 flex items-center gap-1">
+                        @if (f.figmaUrl) {
+                          <a [href]="f.figmaUrl" target="_blank" rel="noopener" title="Open in Figma"
+                             (click)="$event.stopPropagation()"
+                             class="w-5 h-5 rounded flex items-center justify-center bg-pink-50 text-pink-600 hover:bg-pink-100 transition">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 24c2.2 0 4-1.8 4-4v-4H8c-2.2 0-4 1.8-4 4s1.8 4 4 4zm0-12h4V4H8C5.8 4 4 5.8 4 8s1.8 4 4 4zm8-8h-4v8h4c2.2 0 4-1.8 4-4s-1.8-4-4-4zm-4 12c0 2.2 1.8 4 4 4s4-1.8 4-4-1.8-4-4-4-4 1.8-4 4z"/></svg>
+                          </a>
+                        }
+                        @if (f.prUrl) {
+                          <a [href]="f.prUrl" target="_blank" rel="noopener" title="Open pull request"
+                             (click)="$event.stopPropagation()"
+                             class="w-5 h-5 rounded flex items-center justify-center bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6 8v8m12-6v6"/></svg>
+                          </a>
+                        }
+                        @if (f.ticketUrl) {
+                          <a [href]="f.ticketUrl" target="_blank" rel="noopener" title="Open ticket"
+                             (click)="$event.stopPropagation()"
+                             class="w-5 h-5 rounded flex items-center justify-center bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 5l6 6-6 6M5 11h14"/></svg>
+                          </a>
+                        }
+                        @if (f.docUrl) {
+                          <a [href]="f.docUrl" target="_blank" rel="noopener" title="Open doc"
+                             (click)="$event.stopPropagation()"
+                             class="w-5 h-5 rounded flex items-center justify-center bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          </a>
+                        }
+                      </div>
+                    }
+
+                    <!-- Title -->
+                    <div class="px-4 pb-3 text-sm font-semibold leading-snug text-ink line-clamp-3" [title]="f.title">{{ f.title }}</div>
+
+                    <!-- Track status pills -->
+                    <div class="px-3 pb-3 grid gap-1" [style.gridTemplateColumns]="'repeat(' + p.tracks.length + ', minmax(0, 1fr))'">
+                      @for (t of p.tracks; track t.id) {
+                        <button
+                          class="h-7 rounded-md text-[11px] font-bold flex items-center justify-center tracking-wider transition-all hover:brightness-95 active:scale-95"
+                          [style.background]="statusColor(f, t.id)"
+                          [style.color]="trackTextColor(f, t.id)"
+                          [title]="t.name + ': ' + pretty(statusOf(f, t.id))"
+                          (click)="cycle(f, t); $event.stopPropagation()">
+                          {{ trackLetter(t.name) }}
+                        </button>
+                      }
+                    </div>
+
+                    <!-- Output handle -->
                     <div
                       fNodeOutput
                       [fOutputId]="'out-' + f.id"
                       fOutputConnectableSide="bottom"
                       (click)="$event.stopPropagation()"
-                      class="shipline-handle shipline-handle-out mx-auto -mb-2 w-4 h-4 rounded-full bg-slate-400 border-2 border-white cursor-crosshair hover:bg-ink hover:scale-125 transition"></div>
+                      class="shipline-handle shipline-handle-out absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 rounded-full bg-slate-400 border-2 border-white cursor-crosshair hover:bg-ink hover:scale-125 transition"></div>
                   </div>
                 }
 
@@ -380,6 +469,46 @@ export class ProjectPage {
     if (!id) return null;
     return this.features().find(f => f.id === id) ?? null;
   });
+
+  atRiskMode = signal(false);
+
+  isAtRisk(f: Feature, tracks: Track[]): boolean {
+    let anyBlocked = false, anyProgress = false;
+    for (const t of tracks) {
+      const s = this.statusOf(f, t.id);
+      if (s === 'BLOCKED') anyBlocked = true;
+      if (s === 'IN_PROGRESS' || s === 'DONE') anyProgress = true;
+    }
+    if (anyBlocked) return true;
+    if (f.priority === 'P0' && !anyProgress) return true;
+    return false;
+  }
+
+  atRiskCount = computed(() => {
+    const p = this.project();
+    if (!p) return 0;
+    return this.features().filter(f => this.isAtRisk(f, p.tracks)).length;
+  });
+
+  toggleAtRisk() {
+    this.atRiskMode.update(v => !v);
+  }
+
+  shouldDimFeature(f: Feature, tracks: Track[]): boolean {
+    if (this.dimFeature(f.epicId)) return true;
+    if (this.atRiskMode() && !this.isAtRisk(f, tracks)) return true;
+    return false;
+  }
+
+  shouldDimEpic(epicId: string): boolean {
+    if (this.dimEpic(epicId)) return true;
+    if (this.atRiskMode()) {
+      const p = this.project();
+      if (!p) return false;
+      return !this.features().some(f => f.epicId === epicId && this.isAtRisk(f, p.tracks));
+    }
+    return false;
+  }
 
   selectEpic(epicId: string) {
     const next = this.selectedEpicId() === epicId ? null : epicId;
@@ -577,6 +706,36 @@ export class ProjectPage {
     return map;
   });
 
+  epicRollup = computed(() => {
+    const map: Record<string, { done: number; total: number }> = {};
+    const p = this.project();
+    if (!p) return map;
+    for (const e of p.epics) map[e.id] = { done: 0, total: 0 };
+    for (const f of this.features()) {
+      if (!f.epicId || !map[f.epicId]) continue;
+      for (const t of p.tracks) {
+        map[f.epicId].total++;
+        const s = this.statusOf(f, t.id);
+        if (s === 'DONE' || s === 'NA') map[f.epicId].done++;
+      }
+    }
+    return map;
+  });
+
+  projectRollup = computed(() => {
+    const p = this.project();
+    if (!p) return { done: 0, total: 0, pct: 0 };
+    let done = 0, total = 0;
+    for (const f of this.features()) {
+      for (const t of p.tracks) {
+        total++;
+        const s = this.statusOf(f, t.id);
+        if (s === 'DONE' || s === 'NA') done++;
+      }
+    }
+    return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+  });
+
   firstFeatureOfEpic = computed(() => {
     const map: Record<string, string> = {};
     const sorted = [...this.features()].sort((a, b) => a.canvasY - b.canvasY);
@@ -660,6 +819,60 @@ export class ProjectPage {
     return p === 'P0' ? '#dc2626' : p === 'P1' ? '#f59e0b' : '#64748b';
   }
 
+  trackLetter(name: string): string {
+    return (name?.trim()?.[0] ?? '?').toUpperCase();
+  }
+
+  trackTextColor(f: Feature, trackId: string): string {
+    const s = this.statusOf(f, trackId);
+    return (s === 'NOT_STARTED' || s === 'NA') ? '#475569' : '#ffffff';
+  }
+
+  doneCountOf(f: Feature, tracks: Track[]): number {
+    let n = 0;
+    for (const t of tracks) {
+      const s = this.statusOf(f, t.id);
+      if (s === 'DONE' || s === 'NA') n++;
+    }
+    return n;
+  }
+
+  accentColor(f: Feature, tracks: Track[]): string {
+    let hasBlocked = false, hasInProgress = false, allDone = true, anyReal = false;
+    for (const t of tracks) {
+      const s = this.statusOf(f, t.id);
+      if (s === 'BLOCKED') hasBlocked = true;
+      if (s === 'IN_PROGRESS') hasInProgress = true;
+      if (s !== 'NA') anyReal = true;
+      if (s !== 'DONE' && s !== 'NA') allDone = false;
+    }
+    if (hasBlocked) return STATUS_COLOR.BLOCKED;
+    if (hasInProgress) return STATUS_COLOR.IN_PROGRESS;
+    if (allDone && anyReal) return STATUS_COLOR.DONE;
+    return '#e2e8f0';
+  }
+
+  priorityStyle(p: string): { bg: string; fg: string; border: string } {
+    if (p === 'P0') return { bg: '#fee2e2', fg: '#b91c1c', border: '#fecaca' };
+    if (p === 'P1') return { bg: '#fef3c7', fg: '#92400e', border: '#fde68a' };
+    if (p === 'P2') return { bg: '#dbeafe', fg: '#1e40af', border: '#bfdbfe' };
+    return { bg: '#f1f5f9', fg: '#475569', border: '#e2e8f0' };
+  }
+
+  epicPct(epicId: string): number {
+    const r = this.epicRollup()[epicId];
+    if (!r || !r.total) return 0;
+    return Math.round((r.done / r.total) * 100);
+  }
+
+  epicDotColor(epicId: string): string {
+    const pct = this.epicPct(epicId);
+    if (pct >= 100) return STATUS_COLOR.DONE;
+    if (pct >= 50) return STATUS_COLOR.IN_PROGRESS;
+    if (pct > 0) return '#94a3b8';
+    return '#cbd5e1';
+  }
+
   cycle(f: Feature, t: Track) {
     const current = this.statusOf(f, t.id);
     const next = STATUS_ORDER[(STATUS_ORDER.indexOf(current) + 1) % STATUS_ORDER.length];
@@ -695,7 +908,30 @@ export class ProjectPage {
     const inp = document.querySelectorAll('.f-node-input').length;
     const con = document.querySelectorAll('f-connection').length;
     console.log(`[Shipline] fFullRendered — outputs: ${out}, inputs: ${inp}, connections: ${con}, expected connections: ${this.allConnections().length}`);
-    requestAnimationFrame(() => this.fit());
+    const p = this.project();
+    const epicCount = p?.epics.length ?? 0;
+    requestAnimationFrame(() => {
+      this.fit();
+      // fit-to-screen zooms out far enough on big projects to make cards illegible —
+      // clamp to a readable minimum and recenter on the project root.
+      setTimeout(() => {
+        try {
+          const c2 = this.canvas();
+          if (!c2) return;
+          const scale = c2.getScale();
+          const minZoom = epicCount > 8 ? 0.7 : 0.25;
+          if (scale < minZoom) {
+            const host = (c2 as any).hostElement as HTMLElement | undefined;
+            const rect = host?.getBoundingClientRect();
+            const center = rect ? { x: rect.width / 2, y: rect.height / 2 } : { x: 0, y: 0 };
+            c2.setScale(minZoom, center);
+            requestAnimationFrame(() => {
+              try { c2.centerGroupOrNode('project-root', false); } catch {}
+            });
+          }
+        } catch (e) { console.warn('zoom clamp failed', e); }
+      }, 600);
+    });
   }
 
   fit() {

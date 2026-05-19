@@ -12,6 +12,8 @@ Cross-functional feature-readiness tracker for founders and CTOs. Upload an Exce
 [![Postgres](https://img.shields.io/badge/Postgres-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Foblex&nbsp;Flow](https://img.shields.io/badge/Foblex_Flow-18-34D399)](https://flow.foblex.com/)
 
+![Shipline canvas — ShareDeal Social with 31 epics and 194 features](docs/screenshots/canvas.png)
+
 </div>
 
 ---
@@ -57,7 +59,7 @@ You assemble the picture every Monday morning. Shipline makes it visible all the
 | | |
 | --- | --- |
 | **Homepage** — premium landing with project cards | ![Homepage](docs/screenshots/homepage.png) |
-| **Canvas** — full feature tree with status strips | ![Canvas](docs/screenshots/canvas.png) |
+| **Canvas** — full feature tree, accent-dot health, P/B/D/Q/U status pills | ![Canvas](docs/screenshots/canvas.png) |
 | **Spotlight** — click an epic, the rest dims | ![Spotlight](docs/screenshots/spotlight.png) |
 | **Detail panel** — all 22 Excel columns + 5 track statuses | ![Detail panel](docs/screenshots/detail-panel.png) |
 | **Dashboard** — per-epic readiness rollup | ![Dashboard](docs/screenshots/dashboard.png) |

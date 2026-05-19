@@ -11,6 +11,95 @@ html, body { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystem
   --ff-connection-color: #94a3b8;
   --ff-connection-width: 2px;
   --ff-marker-color: #64748b;
+
+  /* Connector handles (input/output dots) — Foblex defaults to size 14px
+     with an accent-blue background when connected. Force small slate dots
+     so they read as subtle hit-targets centered on each card edge. */
+  --ff-connector-size: 12px;
+  --ff-connector-border-width: 2px;
+  --ff-connector-background-color: #cbd5e1;        /* slate-300 */
+  --ff-connector-border-color: #ffffff;
+  --ff-connector-connected-color: #94a3b8;         /* slate-400 (no blue) */
+  --ff-connector-accent-color: #0f172a;            /* ink — hover ring */
+  --ff-connector-disabled-color: #f1f5f9;
+  --ff-connector-disabled-border-color: #e5e7eb;
+  --ff-color-surface-card: #ffffff;
+  --ff-color-text-secondary: #94a3b8;
+  --ff-color-connector-connected: #94a3b8;
+  --ff-color-accent: #0f172a;
+}
+
+/* Override Foblex's default .f-node frame (which forces 120px + centered + padded).
+   Selector specificity 0,2,1 beats Foblex's `f-flow .f-node` (0,1,1). All visual
+   states for cards (hover, selected, at-risk, epic-selected) live here too, since
+   Tailwind hover classes can't out-specify a `f-flow .f-node.x` selector. */
+
+/* Feature card */
+f-flow .f-node.shipline-feature {
+  width: 18rem;
+  min-height: 0;
+  padding: 0;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  color: #0f172a;
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+f-flow .f-node.shipline-feature:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+f-flow .f-node.shipline-feature.shipline-selected {
+  border-color: #0f172a;
+  box-shadow: 0 0 0 2px #0f172a;
+}
+f-flow .f-node.shipline-feature.shipline-at-risk {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px #ef4444, 0 6px 18px rgba(239, 68, 68, 0.22);
+}
+f-flow .f-node.shipline-feature.shipline-at-risk:hover {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px #dc2626, 0 8px 22px rgba(239, 68, 68, 0.35);
+}
+
+/* Epic pill */
+f-flow .f-node.shipline-epic {
+  width: 15rem;
+  min-height: 0;
+  padding: 0;
+  text-align: center;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  color: #0f172a;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+f-flow .f-node.shipline-epic:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+f-flow .f-node.shipline-epic.shipline-epic-selected {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+/* Project root */
+f-flow .f-node.shipline-root {
+  width: 15rem;
+  min-height: 0;
+  padding: 0;
+  text-align: center;
+  background: #ffffff;
+  border: 2px solid #0f172a;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  color: #0f172a;
 }
 
 f-flow .f-connection .f-connection-path {
@@ -50,6 +139,7 @@ f-flow f-connection.shipline-conn-deletable:hover [fMarker] polygon {
 .shipline-handle.shipline-handle-out:hover {
   box-shadow: 0 0 0 6px rgba(15, 23, 42, 0.08);
 }
+
 
 f-flow .f-connection .f-connection-selection {
   stroke: transparent !important;

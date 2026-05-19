@@ -113,6 +113,10 @@ model Feature {
   owner              String?
   acceptanceCriteria String?
   notes              String?
+  figmaUrl           String?
+  prUrl              String?
+  ticketUrl          String?
+  docUrl             String?
   canvasX            Float           @default(0)
   canvasY            Float           @default(0)
   createdAt          DateTime        @default(now())
