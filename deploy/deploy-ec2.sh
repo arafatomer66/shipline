@@ -9,6 +9,8 @@
 # Optional env vars:
 #   ADMIN_USER       (default: admin)
 #   REPO_URL         (default: https://github.com/arafatomer66/shipline.git)
+#   PUBLIC_HOST      (default: detected from instance metadata — the public IP
+#                     or the domain. Used as the cert CN/SAN and in nginx.)
 #
 # Usage:
 #   ADMIN_PASSWORD='your-strong-password' bash deploy-ec2.sh
@@ -17,6 +19,14 @@ set -euo pipefail
 REPO_URL="${REPO_URL:-https://github.com/arafatomer66/shipline.git}"
 APP_DIR="/home/ec2-user/shipline"
 ADMIN_USER="${ADMIN_USER:-admin}"
+
+# Detect public IP if PUBLIC_HOST not supplied (used for the self-signed cert SAN).
+if [ -z "${PUBLIC_HOST:-}" ]; then
+  TOKEN=$(curl -sf -X PUT "http://169.254.169.254/latest/api/token" \
+    -H "X-aws-ec2-metadata-token-ttl-seconds: 60" || true)
+  PUBLIC_HOST=$(curl -sf -H "X-aws-ec2-metadata-token: $TOKEN" \
+    http://169.254.169.254/latest/meta-data/public-ipv4 || echo "_")
+fi
 
 if [ -z "${ADMIN_PASSWORD:-}" ]; then
   echo "ERROR: ADMIN_PASSWORD is required. Re-run with:" >&2
@@ -166,13 +176,48 @@ p.write_text(strip_first_server(src))
 PY
 fi
 
-# 8) shipline.conf — Angular static + /api proxy + auth_basic
+# 8) Self-signed TLS cert (Let's Encrypt won't issue for *.compute.amazonaws.com).
+#    Browsers will warn the first visit; click through once.
+if [ ! -f /etc/nginx/ssl/shipline.crt ]; then
+  log "Generating self-signed cert (CN=$PUBLIC_HOST, 825-day validity)"
+  sudo mkdir -p /etc/nginx/ssl
+  # If PUBLIC_HOST looks like an IP, put it in the SAN as IP:, else as DNS:.
+  if [[ "$PUBLIC_HOST" =~ ^[0-9.]+$ ]]; then
+    SAN_LINE="IP:$PUBLIC_HOST"
+  else
+    SAN_LINE="DNS:$PUBLIC_HOST"
+  fi
+  sudo openssl req -x509 -nodes -newkey rsa:2048 \
+    -keyout /etc/nginx/ssl/shipline.key \
+    -out  /etc/nginx/ssl/shipline.crt \
+    -days 825 \
+    -subj "/CN=$PUBLIC_HOST/O=Shipline" \
+    -addext "subjectAltName=$SAN_LINE" 2>&1 | tail -1
+  sudo chmod 600 /etc/nginx/ssl/shipline.key
+  sudo chmod 644 /etc/nginx/ssl/shipline.crt
+fi
+
+# 9) shipline.conf — HTTP → HTTPS redirect, HTTPS does Angular + /api proxy + auth
 log "Configuring nginx"
 sudo tee /etc/nginx/conf.d/shipline.conf >/dev/null <<EOF
+# Redirect HTTP -> HTTPS
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
     server_name _;
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/ssl/shipline.crt;
+    ssl_certificate_key /etc/nginx/ssl/shipline.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
 
     root $WEB_DIST;
     index index.html;

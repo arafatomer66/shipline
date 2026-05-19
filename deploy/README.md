@@ -52,7 +52,8 @@ Default username is `admin`. Override with `ADMIN_USER='you' ADMIN_PASSWORD=...`
 4. **API**: `npm install`, `prisma migrate deploy`, `nest build`, run as `shipline-api.service` (systemd, `Restart=always`).
 5. **Web**: `npm install`, rewrites the dev API base to `/api`, `ng build --configuration production`.
 6. **Basic Auth**: installs `httpd-tools`, generates `/etc/nginx/.htpasswd`, sets it to mode 640 owned by `root:nginx`.
-7. **nginx**: strips the default server block from `nginx.conf` (otherwise it eats our requests), writes `/etc/nginx/conf.d/shipline.conf` that serves the SPA + reverse-proxies `/api/` + enforces `auth_basic` everywhere **except** `/api/health` (kept open for uptime checks).
+7. **TLS self-signed cert** (RSA 2048, 825-day validity) — `*.compute.amazonaws.com` can't get a Let's Encrypt cert, so we generate `/etc/nginx/ssl/shipline.{crt,key}` with the instance's public IP as the SAN. Browsers will warn on first visit ("Not Secure"); click through once.
+8. **nginx**: strips the default server block from `nginx.conf` (otherwise it eats our requests), writes `/etc/nginx/conf.d/shipline.conf` — port 80 returns `301` to HTTPS, port 443 serves the SPA + reverse-proxies `/api/` + enforces `auth_basic` everywhere **except** `/api/health` (kept open for uptime checks).
 
 ## Rotating the Basic-Auth password
 
@@ -66,10 +67,21 @@ sudo systemctl reload nginx
 ## Health check
 
 ```bash
-curl http://<public-ip>/api/health
+curl -k https://<public-ip>/api/health
 ```
 
-Stays open without credentials so your uptime monitor can hit it.
+Stays open without credentials so your uptime monitor can hit it. (`-k` because the cert is self-signed.)
+
+## Upgrading to a real cert (when you have a domain)
+
+If you later point a domain at the instance and want a trusted Let's Encrypt cert, replace step 7 in the script with Caddy or certbot, e.g.:
+
+```bash
+sudo dnf install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d shipline.yourdomain.com
+```
+
+Certbot will edit `shipline.conf` in place and add a cron job for auto-renewal.
 
 ## Removing the deploy
 
